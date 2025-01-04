@@ -1,5 +1,5 @@
-import asyncio
 from pathlib import Path
+from urllib.parse import parse_qs
 
 import aiofiles
 import aiohttp
@@ -12,8 +12,8 @@ from dynabook_scraper.utils.common import (
     remove_null_fields,
 )
 from .utils import json
-from .utils.uvloop import async_run
 from .utils.paths import data_dir, html_dir, products_work_dir
+from .utils.uvloop import async_run
 
 CONCURRENCY = 30
 
@@ -31,6 +31,7 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
     async with aiofiles.open(product_dir / "operating_systems.json") as f:
         os_list = await json.aload(f)
 
+    # Find model image
     soup = bs4.BeautifulSoup(page, "html.parser")
     model_img = soup.select_one(".model_img img")
     if model_img:
@@ -38,14 +39,43 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
         async with aiofiles.open(product_dir / "model_img.txt", "w") as f:
             await f.write(model_img_src)
 
+    # Find factory configuration
+    factory_config_line = None
+    for line in page.splitlines():
+        if "/support/viewFactoryConfig" in line:
+            factory_config_line = line
+            break
+    if factory_config_line:
+        url = factory_config_line.split('"')[1]
+        query_string = url.split("?", 1)[1]
+        query = parse_qs(query_string)
+
+        mpn = query.get("mpn", ["null"])[0]
+        config = query.get("config", ["null"])[0]
+
+        if mpn != "null" and config != "null":
+            factory_config = {"mpn": mpn, "config": {}}
+
+            for entry in config.split(","):
+                kvp = entry.strip().split("=", 1)
+                if len(kvp) < 2:
+                    kvp.append("")
+                factory_config["config"][kvp[0]] = kvp[1]
+
+            async with aiofiles.open(product_dir / "factory_config.json", "wb") as f:
+                await json.adump(factory_config, f)
+
+    # Find manuals and specs
     manuals_and_specs = remove_null_fields(extract_json_var(page, "manualsSpecsJsonArr"))
     async with aiofiles.open(product_dir / "manuals_and_specs.json", "wb") as f:
         await json.adump(manuals_and_specs, f)
 
+    # Find knowledge base
     kb = remove_null_fields(extract_json_var(page, "knowledgeBaseJsonArr"))
     async with aiofiles.open(product_dir / "knowledge_base.json", "wb") as f:
         await json.adump(kb, f)
 
+    # Find drivers
     driver_contents = {}
 
     def ingest_drivers(driver_contents_list):

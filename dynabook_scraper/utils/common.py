@@ -10,7 +10,7 @@ from tqdm import tqdm
 from . import json
 
 
-def extract_json_var(script: str, var_name: str) -> dict:
+def extract_json_var(script: str, var_name: str):
     match = re.search(rf"var\s+{var_name}\s*=\s*eval\((.*?)\);", script, flags=re.DOTALL)
     if not match:
         raise ValueError(f"Could not find JSON variable {var_name}")
