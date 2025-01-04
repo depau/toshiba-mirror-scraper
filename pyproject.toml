@@ -31,7 +31,7 @@ dynabook-scrape-driver-contents = "dynabook_scraper.content_details:cli_scrape_d
 dynabook-scrape-kb-contents = "dynabook_scraper.content_details:cli_scrape_kb_contents"
 dynabook-scrape-manuals-contents = "dynabook_scraper.content_details:cli_scrape_manuals_contents"
 dynabook-download-contents = "dynabook_scraper.contents:cli_download_contents"
-dynabook-gen-products-index = "dynabook_scraper.index:cli_gen_products_index"
+dynabook-gen-products-index = "dynabook_scraper.product_index:cli_gen_products_index"
 
 [build-system]
 requires = ["hatchling"]
@@ -40,6 +40,9 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.sdist]
 exclude = [
     "/.github",
+]
+include = [
+    "**/templates/*",
 ]
 
 [tool.hatch.build.targets.wheel]
