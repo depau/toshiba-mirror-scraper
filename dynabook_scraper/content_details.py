@@ -12,7 +12,7 @@ from tqdm import tqdm
 
 from dynabook_scraper.utils.common import run_concurrently, remove_null_fields, http_retry
 from .utils.uvloop import async_run
-from .utils.paths import products_dir, content_dir
+from .utils.paths import products_work_dir, content_dir
 from .utils import json
 
 
@@ -161,7 +161,7 @@ class ContentDownloader:
 
 
 def gather_drivers(downloader: ContentDownloader):
-    driver_jsons = products_dir.glob("*/drivers.json")
+    driver_jsons = products_work_dir.glob("*/drivers.json")
 
     for f in tqdm(list(driver_jsons), desc="Gathering drivers", unit="file"):
         with open(f) as file:
@@ -172,7 +172,7 @@ def gather_drivers(downloader: ContentDownloader):
 
 
 def gather_knowledge_base(downloader: ContentDownloader):
-    kb_jsons = products_dir.glob("*/knowledge_base.json")
+    kb_jsons = products_work_dir.glob("*/knowledge_base.json")
 
     for f in tqdm(list(kb_jsons), desc="Gathering knowledge base", unit="file"):
         with open(f) as file:
@@ -183,7 +183,7 @@ def gather_knowledge_base(downloader: ContentDownloader):
 
 
 def gather_manuals_and_specs(downloader: ContentDownloader):
-    manuals_jsons = products_dir.glob("*/manuals_and_specs.json")
+    manuals_jsons = products_work_dir.glob("*/manuals_and_specs.json")
 
     for f in tqdm(list(manuals_jsons), desc="Gathering manuals and specs", unit="file"):
         with open(f) as file:

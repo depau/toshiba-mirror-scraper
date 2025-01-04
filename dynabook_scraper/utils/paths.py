@@ -7,14 +7,17 @@ data_dir.mkdir(exist_ok=True)
 assets_dir = data_dir / "assets"
 assets_dir.mkdir(exist_ok=True)
 
-product_assets_dir = assets_dir / "products"
-product_assets_dir.mkdir(exist_ok=True)
+product_dir = data_dir / "products"
+product_dir.mkdir(exist_ok=True)
 
-html_dir = data_dir / "html"
+work_dir = data_dir / "work"
+work_dir.mkdir(exist_ok=True)
+
+html_dir = work_dir / "html"
 html_dir.mkdir(exist_ok=True)
 
-products_dir = data_dir / "products"
-products_dir.mkdir(exist_ok=True)
+products_work_dir = work_dir / "products"
+products_work_dir.mkdir(exist_ok=True)
 
 content_dir = data_dir / "content"
 content_dir.mkdir(exist_ok=True)

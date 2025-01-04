@@ -12,14 +12,14 @@ from dynabook_scraper.utils.common import (
 )
 from .utils import json
 from .utils.uvloop import async_run
-from .utils.paths import data_dir, html_dir, products_dir
+from .utils.paths import data_dir, html_dir, products_work_dir
 
 CONCURRENCY = 20
 
 
 @http_retry
 async def scrape_product_html(session: aiohttp.ClientSession, mid: str):
-    product_dir = products_dir / mid
+    product_dir = products_work_dir / mid
     product_dir.mkdir(exist_ok=True)
     base_url = f"https://support.dynabook.com/support/modelHome?freeText={mid}"
     async with session.get(base_url) as response:
@@ -55,7 +55,7 @@ async def scrape_products_html(products_list: Path = data_dir / "all_products_fl
 
     filtered_products = {}
     for mid in all_products.keys():
-        drivers = products_dir / mid / "html/base.html"
+        drivers = products_work_dir / mid / "html/base.html"
         if drivers.is_file() and drivers.stat().st_size > 0:
             continue
 

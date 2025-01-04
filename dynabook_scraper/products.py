@@ -12,14 +12,14 @@ from dynabook_scraper.utils.common import (
 )
 from .utils import json
 from .utils.uvloop import async_run
-from .utils.paths import data_dir, html_dir, products_dir
+from .utils.paths import data_dir, html_dir, products_work_dir
 
 CONCURRENCY = 20
 
 
 # noinspection JSUnresolvedReference
 async def parse_product(session: aiohttp.ClientSession, mid: str):
-    product_dir = products_dir / mid
+    product_dir = products_work_dir / mid
     product_dir.mkdir(exist_ok=True)
 
     product_html_dir = html_dir / mid

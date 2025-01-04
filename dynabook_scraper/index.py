@@ -6,7 +6,7 @@ from tqdm import tqdm
 
 from dynabook_scraper.utils.common import remove_null_fields, run_concurrently
 from .utils import json
-from .utils.paths import data_dir, product_assets_dir, products_dir, content_dir
+from .utils.paths import data_dir, product_dir, products_work_dir, content_dir
 from .utils.uvloop import async_run
 
 
@@ -64,7 +64,7 @@ async def gen_product_index(all_products, families, info, mid):
     }
 
     # Load knowledge base
-    async with aiofiles.open(products_dir / str(mid) / "knowledge_base.json") as f:
+    async with aiofiles.open(products_work_dir / str(mid) / "knowledge_base.json") as f:
         kb = await json.aload(f)
     for item in kb:
         content = await get_content_info(item["contentID"])
@@ -73,7 +73,7 @@ async def gen_product_index(all_products, families, info, mid):
     product["knowledge_base"] = kb
 
     # Load manuals and specs
-    async with aiofiles.open(products_dir / str(mid) / "manuals_and_specs.json") as f:
+    async with aiofiles.open(products_work_dir / str(mid) / "manuals_and_specs.json") as f:
         manuals_and_specs = await json.aload(f)
     for item in manuals_and_specs:
         content = await get_content_info(item["contentID"])
@@ -82,7 +82,7 @@ async def gen_product_index(all_products, families, info, mid):
     product["manuals_and_specs"] = manuals_and_specs
 
     # Load drivers
-    async with aiofiles.open(products_dir / str(mid) / "drivers.json") as f:
+    async with aiofiles.open(products_work_dir / str(mid) / "drivers.json") as f:
         drivers: dict[str, Any] = await json.aload(f)
     product["drivers"] = drivers
 
@@ -93,7 +93,7 @@ async def gen_product_index(all_products, families, info, mid):
 
     product = remove_null_fields(product)
 
-    async with aiofiles.open(product_assets_dir / f"{mid}.json", "wb") as f:
+    async with aiofiles.open(product_dir / f"{mid}.json", "wb") as f:
         await json.adump(product, f, indent=2)
 
 
