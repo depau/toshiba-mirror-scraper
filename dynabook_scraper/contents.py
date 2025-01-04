@@ -25,7 +25,7 @@ def handle_error(cid: str, details: dict[str, Any], out_dir: Path):
         traceback.print_exc(file=f)
 
 
-async def write_result_file(cid: str, url: str, status_code: int, filename: str):
+async def write_result_file(cid: str, url: str, status_code: int, filename: str, source: str):
     result = {
         "contentID": cid,
         "url": url,
@@ -36,6 +36,20 @@ async def write_result_file(cid: str, url: str, status_code: int, filename: str)
 
     async with aiofiles.open(content_dir / f"{cid}_crawl_result.json", "w") as f:
         await json.adump(result, f)
+
+
+async def download_from_archive_org(url: str, out_dir: Path):
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"https://web.archive.org/wayback/available", params={"url": url}) as response:
+            response.raise_for_status()
+            data = await response.json()
+
+        if "closest" not in data["archived_snapshots"] or data["archived_snapshots"]["closest"]["status"] != "200":
+            tqdm.write(f"Content not available on archive.org: {url}")
+            raise aiohttp.ClientResponseError(response.request_info, response.history, status=404)
+
+        archive_url = data["archived_snapshots"]["closest"]["url"]
+        await download_file(archive_url, out_dir)
 
 
 async def download_content(details: dict[str, Any]):
@@ -53,10 +67,21 @@ async def download_content(details: dict[str, Any]):
                 return
 
             filename = Path(url).name
-            if (out_dir / filename).is_file():
+            if (out_dir / filename).is_file() and (
+                "fileSize" not in details or details["fileSize"] == (out_dir / filename).stat().st_size
+            ):
                 return
-            await download_file(url, out_dir)
-            await write_result_file(cid, url, 200, filename)
+
+            try:
+                await download_file(url, out_dir)
+                await write_result_file(cid, url, 200, filename, "dynabook.com")
+            except aiohttp.ClientResponseError as e:
+                if e.status == 404:
+                    tqdm.write(f"Unavailable, trying archive.org: [{cid}] {details.get('contentFile')}")
+                    await download_from_archive_org(url, out_dir)
+                    await write_result_file(cid, url, 200, filename, "archive.org")
+                else:
+                    raise
 
         elif content_type == "scraper-swf":
             filename = "index.html"
@@ -99,7 +124,7 @@ async def download_content(details: dict[str, Any]):
             if embed:
                 await download_file(url_base + "/" + embed["src"], out_dir)
 
-            await write_result_file(cid, url, 200, filename)
+            await write_result_file(cid, url, 200, filename, "dynabook.com")
     except aiohttp.ClientResponseError as e:
         await write_result_file(cid, url, e.status, filename)
         if e.status == 404:
