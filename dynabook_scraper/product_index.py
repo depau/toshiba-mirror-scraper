@@ -66,7 +66,7 @@ async def gen_product_index(all_products, families, info, mid):
     model_img_link = products_work_dir / str(mid) / "model_img.txt"
     if model_img_link.is_file():
         async with aiofiles.open(model_img_link) as f:
-            product["model_img"] = (await f.read()).strip()
+            product["model_img"] = f"assets{(await f.read()).strip()}"
 
     # Load factory config
     factory_config = products_work_dir / str(mid) / "factory_config.json"
