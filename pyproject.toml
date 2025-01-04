@@ -1,0 +1,47 @@
+[project]
+name = "dynabook-scraper"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "aiohttp>=3.11.11",
+    "beautifulsoup4>=4.12.3",
+    "jq>=1.8.0",
+    "playwright>=1.49.1",
+    "tqdm>=4.67.1",
+]
+
+[dependency-groups]
+dev = [
+    "ptipython>=1.0.1",
+]
+
+[project.scripts]
+dynabook-scrape-products-list = "dynabook_scraper.products_list:cli_scrape_products_list"
+dynabook-scrape-assets = "dynabook_scraper.assets:cli_scrape_assets"
+dynabook-scrape-products-html = "dynabook_scraper.html:cli_scrape_products_html"
+dynabook-parse-products-html = "dynabook_scraper.products:cli_parse_products_html"
+dynabook-scrape-driver-contents = "dynabook_scraper.content_details:cli_scrape_driver_contents"
+dynabook-scrape-kb-contents = "dynabook_scraper.content_details:cli_scrape_kb_contents"
+dynabook-scrape-manuals-contents = "dynabook_scraper.content_details:cli_scrape_manuals_contents"
+dynabook-download-contents = "dynabook_scraper.contents:cli_download_contents"
+dynabook-gen-products-index = "dynabook_scraper.index:cli_gen_products_index"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.sdist]
+exclude = [
+    "/.github",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["dynabook_scraper"]
+
+[tool.black]
+line-length = 120
+
+[tool.ruff]
+line-length = 120
