@@ -63,6 +63,11 @@ async def gen_product_index(all_products, families, info, mid):
         "drivers": {},
     }
 
+    model_img_link = products_work_dir / str(mid) / "model_img.txt"
+    if model_img_link.is_file():
+        async with aiofiles.open(model_img_link) as f:
+            product["model_img"] = (await f.read()).strip()
+
     # Load knowledge base
     async with aiofiles.open(products_work_dir / str(mid) / "knowledge_base.json") as f:
         kb = await json.aload(f)

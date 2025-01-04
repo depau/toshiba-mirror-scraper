@@ -3,6 +3,7 @@ from pathlib import Path
 
 import aiofiles
 import aiohttp
+import bs4
 from tqdm import tqdm
 
 from dynabook_scraper.utils.common import (
@@ -14,7 +15,7 @@ from .utils import json
 from .utils.uvloop import async_run
 from .utils.paths import data_dir, html_dir, products_work_dir
 
-CONCURRENCY = 20
+CONCURRENCY = 30
 
 
 # noinspection JSUnresolvedReference
@@ -28,7 +29,14 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
         page = await f.read()
 
     async with aiofiles.open(product_dir / "operating_systems.json") as f:
-        os_list = await json.load(f)
+        os_list = await json.aload(f)
+
+    soup = bs4.BeautifulSoup(page, "html.parser")
+    model_img = soup.select_one(".model_img img")
+    if model_img:
+        model_img_src = model_img["src"]
+        async with aiofiles.open(product_dir / "model_img.txt", "w") as f:
+            await f.write(model_img_src)
 
     manuals_and_specs = remove_null_fields(extract_json_var(page, "manualsSpecsJsonArr"))
     async with aiofiles.open(product_dir / "manuals_and_specs.json", "wb") as f:

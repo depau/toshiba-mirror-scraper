@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import aiofiles
@@ -6,8 +5,9 @@ import aiohttp
 from tqdm import tqdm
 
 from dynabook_scraper.utils.common import run_concurrently, download_file
-from .utils.paths import assets_dir
 from .utils import json
+from .utils.paths import assets_dir, products_work_dir
+from .utils.uvloop import async_run
 
 
 async def download_asset(path: str):
@@ -37,8 +37,12 @@ async def scrape_assets():
             if "fimg" in family and family["fimg"]:
                 assets.append(family["fimg"])
 
+    for file in products_work_dir.glob("model_img.txt"):
+        async with aiofiles.open(file) as f:
+            assets.append((await f.read()).strip())
+
     progress = tqdm(assets, desc="Scraping assets")
-    await run_concurrently(10, download_asset, progress)
+    await run_concurrently(30, download_asset, progress)
 
 
 def cli_scrape_assets():
