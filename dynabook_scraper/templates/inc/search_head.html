@@ -1,0 +1,76 @@
+<link
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-theme-classic@1.17.8/dist/theme.min.css"
+        integrity="sha256-CBSeXQ+tuimda4KSNfSUQiLam+M9/o/Q30HJAZtRJLA="
+        crossorigin="anonymous"
+/>
+
+<script src="https://cdn.jsdelivr.net/npm/@algolia/autocomplete-js@1.17.8/dist/umd/index.production.js"
+        integrity="sha256-BswVd4QSpCLHYZLRCx0R3y78oQuL8q/Tz+TLsMJAENU=" crossorigin="anonymous"></script>
+<script>
+    const {autocomplete} = window['@algolia/autocomplete-js'];
+</script>
+<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
+
+<script>
+    var _fuse = null;
+
+    async function loadIndex() {
+        await loadProducts();
+
+        _fuse = new Fuse(Object.values(_products), {
+            keys: [
+                {name: 'mname', weight: 0.5},
+                {name: 'fname', weight: 0.3},
+                {name: 'pname', weight: 0.15},
+                {name: 'mid', weight: 0.05},
+            ],
+            includeScore: false,
+            includeAllMatches: true,
+            useExtendedSearch: true,
+            threshold: 0.3,
+        });
+
+        return _fuse;
+    }
+
+    async function search(query) {
+        if (query === '') return;
+        return _fuse.search(query);
+    }
+
+    loadIndex().then(() => {
+        autocomplete({
+            container: '#autocomplete',
+            placeholder: 'Search for a product...',
+            getSources() {
+                return [{
+                    sourceId: 'products',
+                    getItems({query}) {
+                        return search(query);
+                    },
+                    onSelect({item}) {
+                        document.location.href = `{{ base_url }}/product/?mid=${item.item.mid}`;
+                    },
+                    templates: {
+                        item({item, html}) {
+                            return html`
+                                <div class="search-result">
+                                    <div class="info">
+                                        <div class="name">${item.item.fname} ${item.item.mname}</div>
+                                        <div class="product-line">${item.item.pname}</div>
+                                    </div>
+                                </div>
+                            `;
+                        },
+                        noResults({html}) {
+                            return html`
+                                <div>No results found</div>`;
+                        }
+                    }
+                }]
+            }
+        });
+    });
+
+</script>

@@ -1,0 +1,169 @@
+{% extends "inc/base.html" %}
+
+{% block content %}
+
+    <article id="product">
+        <em>Loading...</em>
+    </article>
+
+    <script>
+        async function loadProduct(mid) {
+            const productUrl = `{{ base_url }}/products/${mid}.json`;
+            const response = await fetch(productUrl);
+            const product = await response.json();
+
+            const root = document.getElementById('product');
+            root.innerHTML = `
+                <div class="product-header">
+                <div>
+                    <h3>${product.type}</h3>
+                    <h1>${product.family} ${product.name}</h1>
+                </div>
+                    <div id="product-image">
+                    </div>
+                </div>
+                `;
+
+            const content = document.createElement('div');
+            content.classList.add('product-content');
+            root.appendChild(content);
+
+            // Add model img
+            if (Object.hasOwn(product, "model_img")) {
+                const div = document.getElementById('product-image');
+                const img = document.createElement('img');
+                img.src = `{{ base_url }}/${product.model_img}`;
+                img.alt = `${product.family} ${product.name}`;
+                div.appendChild(img);
+            }
+
+            // Add factory config
+            if (Object.hasOwn(product, "factory_config")) {
+                const accordion = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.textContent = 'Factory Configuration';
+                accordion.appendChild(summary);
+
+                const h4 = document.createElement('h4');
+                h4.textContent = `Factory Configuration for ${product.factory_config.mpn}`;
+                accordion.appendChild(h4);
+
+                const table = document.createElement('table');
+                table.classList.add('factory-config');
+                const tbody = document.createElement('tbody');
+                table.appendChild(tbody);
+
+                for (const [key, value] of Object.entries(product.factory_config.config).sort()) {
+                    const tr = document.createElement('tr');
+                    tbody.appendChild(tr);
+
+                    const th = document.createElement('th');
+                    th.textContent = key;
+                    tr.appendChild(th);
+
+                    const td = document.createElement('td');
+                    td.textContent = value;
+                    tr.appendChild(td);
+                }
+
+                accordion.appendChild(table);
+                content.appendChild(accordion);
+            }
+
+            // Add drivers
+            if (Object.hasOwn(product, "drivers") && !isEmpty(product.drivers.contents)) {
+                console.log("has drivers");
+                const accordion = document.createElement('details');
+                accordion.setAttribute('open', '');
+                const summary = document.createElement('summary');
+                summary.textContent = 'Drivers';
+                accordion.appendChild(summary);
+
+                const contents = product.drivers.contents;
+
+                for (const [os, drivers] of Object.entries(product.drivers.drivers)) {
+                    if (drivers.length === 0) {
+                        continue;
+                    }
+
+                    const accordion2 = document.createElement('details');
+                    const summary2 = document.createElement('summary');
+                    summary2.textContent = os;
+                    accordion2.appendChild(summary2);
+
+                    const div = document.createElement('div');
+                    const ul = document.createElement('ul');
+                    ul.classList.add('content-list');
+                    div.appendChild(ul);
+
+                    for (const contentID of drivers.sort((a, b) => contents[b].orgPubDate.localeCompare(contents[a].orgPubDate))) {
+                        const entry = contents[contentID];
+                        if (entry == null) continue;
+
+                        const li = document.createElement('li');
+                        li.appendChild(renderContentListEntry(entry));
+                        ul.appendChild(li);
+                    }
+
+                    accordion2.appendChild(div);
+                    accordion.appendChild(accordion2);
+                }
+
+                content.appendChild(accordion);
+            }
+
+            // Add knowledge base
+            if (Object.hasOwn(product, "knowledge_base") && product.knowledge_base.length > 0) {
+                const accordion = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.textContent = 'Knowledge Base';
+                accordion.appendChild(summary);
+
+                const div = document.createElement('div');
+                const ul = document.createElement('ul');
+                ul.classList.add('content-list');
+                div.appendChild(ul);
+
+                for (const entry of product.knowledge_base.sort((a, b) => b.orgPubDate.localeCompare(a.orgPubDate))) {
+                    const li = document.createElement('li');
+                    ul.appendChild(li);
+                    li.appendChild(renderContentListEntry(entry));
+                }
+
+                accordion.appendChild(div);
+                content.appendChild(accordion);
+            }
+
+            // Add manuals and specs
+            if (Object.hasOwn(product, "manuals_and_specs") && product.manuals_and_specs.length > 0) {
+                const accordion = document.createElement('details');
+                const summary = document.createElement('summary');
+                summary.textContent = 'Manuals and Specifications';
+                accordion.appendChild(summary);
+
+                const div = document.createElement('div');
+                const ul = document.createElement('ul');
+                ul.classList.add('content-list');
+                div.appendChild(ul);
+
+                for (const entry of product.manuals_and_specs.sort((a, b) => b.orgPubDate.localeCompare(a.orgPubDate))) {
+                    const li = document.createElement('li');
+                    ul.appendChild(li);
+                    li.appendChild(renderContentListEntry(entry));
+                }
+
+                accordion.appendChild(div);
+                content.appendChild(accordion);
+            }
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const mid = urlParams.get('mid');
+        if (mid) {
+            loadProduct(mid);
+        } else {
+            document.getElementById('product').innerHTML = 'No product selected';
+        }
+    </script>
+
+{% endblock %}

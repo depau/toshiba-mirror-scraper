@@ -1,0 +1,121 @@
+{% extends "inc/base.html" %}
+
+{% block content %}
+
+    <article id="content">
+        <em>Loading...</em>
+    </article>
+
+    <script>
+        async function loadContent(contentID) {
+            const contentUrl = `{{ base_url }}/content/${contentID}.json`;
+            const response = await fetch(contentUrl);
+            const content = await response.json();
+
+            let crawlResult = null;
+            try {
+                const crawlResultUrl = `{{ base_url }}/content/${contentID}_crawl_result.json`;
+                const response = await fetch(crawlResultUrl);
+                crawlResult = await response.json();
+            } catch (e) {
+                console.error(e);
+            }
+
+            const contentTypeMap = {
+                TP: "Tech pack",
+                PC: "Parts catalog",
+                DL: "Download",
+                UG: "User guide",
+                IA: "Issue alert",
+                SB: "Support bulletin",
+                PT: "Product tour",
+                DS: "Detailed specs",
+                RG: "Resource guide",
+                MM: "Maintenance manual",
+                QSG: "Quick start guide",
+                "scraper-static-content": "Static content",
+                "scraper-swf": "Adobe Flash content",
+            }
+
+            const root = document.getElementById('content');
+            root.innerHTML = `
+                <div class="content-header">
+                    <h3>${contentTypeMap[content.contentType] ?? "Content"}</h3>
+                    <h1>${content.heading ?? content.title ?? content.contentFile.split('/').pop() ?? contentID}</h1>
+                </div>
+            `;
+
+            const header = root.querySelector('.content-header');
+            const date = content.orgPubDate ?? content.startDate ?? content.pubDate;
+            if (date) {
+                const dateElement = document.createElement('p');
+                dateElement.classList.add('date');
+                dateElement.textContent = `Published: ${date}`;
+                header.appendChild(dateElement);
+            }
+
+            if (crawlResult) {
+                const container = document.createElement('article');
+                container.classList.add('download-box');
+
+                const descBox = document.createElement('div');
+                container.appendChild(descBox);
+
+                let filename = content.contentFile.split('/').pop();
+                if (content.contentType === 'scraper-swf') {
+                    filename = 'index.html';
+                }
+                let fileSize = "";
+                if (content.fileSize) {
+                    fileSize = ` (${humanFileSize(content.fileSize)})`;
+                }
+                if (crawlResult.status_code === 200) {
+                    container.classList.add('pico-background-zinc-550');
+                    descBox.innerHTML = `File <span class="pre">${filename}</span>${fileSize} has been mirrored and is available for download.`;
+
+                    const downloadLink = document.createElement('a');
+                    downloadLink.setAttribute('role', 'button');
+                    downloadLink.href = `{{ base_url }}/assets/content/${contentID}/${filename}`;
+                    downloadLink.textContent = 'Download';
+                    container.appendChild(downloadLink);
+                } else {
+                    container.classList.add('pico-background-red-600');
+                    descBox.innerHTML = `File <span class="pre">${filename}</span>${fileSize} is not available since we got an HTTP ${crawlResult.status_code} response at crawl time.`;
+                }
+
+                root.appendChild(container);
+            }
+
+            if (content.packageInstruction) {
+                const packageInstruction = document.createElement('article');
+                packageInstruction.classList.add('package-instruction');
+                packageInstruction.innerHTML = `
+                    <h2>Package instruction</h2>
+                    <p>${content.packageInstruction}</p>
+                `;
+                root.appendChild(packageInstruction);
+            }
+
+            if (content.contentDetail && content.contentDetail.length > 0) {
+                for (const detail of content.contentDetail) {
+                    const detailElement = document.createElement('article');
+                    detailElement.classList.add('content-detail');
+                    detailElement.innerHTML = `
+                        <h2>${detail.subHeading}</h2>
+                        <p>${detail.content}</p>
+                    `;
+                    root.appendChild(detailElement);
+                }
+            }
+        }
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const contentID = urlParams.get('contentID');
+        if (contentID) {
+            loadContent(contentID);
+        } else {
+            document.getElementById('content').innerHTML = 'No content selected';
+        }
+    </script>
+
+{% endblock %}

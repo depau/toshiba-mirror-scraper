@@ -9,6 +9,7 @@ dependencies = [
     "aiohttp>=3.11.11",
     "async-cache>=1.1.1",
     "beautifulsoup4>=4.12.3",
+    "jinja2>=3.1.5",
     "jq>=1.8.0",
     "orjson>=3.10.13; implementation_name == 'cpython'",
     "playwright>=1.49.1",
@@ -32,6 +33,7 @@ dynabook-scrape-kb-contents = "dynabook_scraper.content_details:cli_scrape_kb_co
 dynabook-scrape-manuals-contents = "dynabook_scraper.content_details:cli_scrape_manuals_contents"
 dynabook-download-contents = "dynabook_scraper.contents:cli_download_contents"
 dynabook-gen-products-index = "dynabook_scraper.product_index:cli_gen_products_index"
+dynabook-build-frontend = "dynabook_scraper.frontend:cli_build_frontend"
 
 [build-system]
 requires = ["hatchling"]
@@ -42,7 +44,7 @@ exclude = [
     "/.github",
 ]
 include = [
-    "**/templates/*",
+    "**/templates/**/*",
 ]
 
 [tool.hatch.build.targets.wheel]

@@ -1,0 +1,65 @@
+{% extends "inc/base.html" %}
+
+{% block head %}
+    {% include "inc/search_head.html" %}
+{% endblock %}
+
+{% block content %}
+    {% include "inc/search_form.html" %}
+
+    <br>
+
+    <h1>Products</h1>
+
+    <div id="products"></div>
+
+    <script>
+        loadProducts().then(async () => {
+            const productHierarchy = {};
+
+            for (const product of Object.values(_products)) {
+                const productLine = product.pname;
+                const family = product.fname;
+
+                if (!productHierarchy[productLine]) {
+                    productHierarchy[productLine] = {};
+                }
+                if (!productHierarchy[productLine][family]) {
+                    productHierarchy[productLine][family] = [];
+                }
+
+                productHierarchy[productLine][family].push(product);
+            }
+
+            for (const [productLine, families] of Object.entries(productHierarchy)) {
+                const productLineElement = document.createElement('div');
+                productLineElement.classList.add('product-line');
+                productLineElement.innerHTML = `<h2>${productLine}</h2>`;
+
+                for (const family of Object.keys(families).sort()) {
+                    const products = families[family].sort((a, b) => a.mname.localeCompare(b.mname));
+                    const familyElement = document.createElement('details');
+                    familyElement.classList.add('family');
+                    familyElement.innerHTML = `<summary>${family}</summary>`;
+
+                    for (const product of products) {
+                        const productElement = document.createElement('div');
+                        productElement.classList.add('product');
+                        productElement.innerHTML = `
+                            <a href="{{ base_url }}/product/?mid=${product.mid}">${product.fname} ${product.mname}</a>
+                        `;
+
+                        familyElement.appendChild(productElement);
+                    }
+
+                    productLineElement.appendChild(familyElement);
+                }
+
+                document.getElementById('products').appendChild(productLineElement);
+            }
+
+
+        });
+    </script>
+
+{% endblock %}

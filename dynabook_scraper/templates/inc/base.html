@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
+
+    <title>{% block title %}Toshiba/Dynabook Drivers and Manuals Archive{% endblock %}</title>
+
+    <script src="https://cdn.jsdelivr.net/gh/orca-scan/appearance-changed-event@1.0.0/dist/appearance-changed-event.min.js"></script>
+
+    <script>
+        var _products = null;
+        var _images = null;
+        var _productsPromise = null;
+
+        async function loadProducts() {
+            if (_products !== null && _images !== null) {
+                return;
+            }
+
+            if (_productsPromise != null) {
+                return _productsPromise;
+            }
+
+            _productsPromise = (async () => {
+                const indexUrl = '{{ base_url }}/all_products_flat.json';
+                const response = await fetch(indexUrl);
+                _products = await response.json();
+
+                const imagesUrl = '{{ base_url }}/images.json';
+                const imagesResponse = await fetch(imagesUrl);
+                _images = await imagesResponse.json();
+            })();
+
+            await _productsPromise;
+            _productsPromise = null;
+        }
+
+        function isEmpty(obj) {
+            for (const prop in obj) {
+                if (Object.hasOwn(obj, prop)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        function humanFileSize(size) {
+            const i = size === 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
+            return +((size / Math.pow(1024, i)).toFixed(2)) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
+        }
+
+
+        function renderContentListEntry(obj) {
+            const entry = document.createElement('div');
+            entry.classList.add('content-entry');
+
+            const div = document.createElement('div');
+            entry.appendChild(div);
+
+            const title = document.createElement('p');
+            title.classList.add('title');
+            const link = document.createElement('a');
+            link.href = "{{ base_url }}/content/?contentID=" + obj.contentID;
+            link.textContent = obj.title;
+            title.appendChild(link);
+            div.appendChild(title);
+
+            const pubDate = document.createElement('p');
+            pubDate.classList.add('pub-date');
+            pubDate.textContent = `Posted on: ${obj.orgPubDate ?? obj.startDate}`;
+
+            if (obj.fileVersion) {
+                pubDate.textContent += ` | Version ${obj.fileVersion}`;
+            }
+            if (obj.fileSize) {
+                pubDate.textContent += ` | ${humanFileSize(obj.fileSize)}`;
+            }
+
+            div.appendChild(pubDate);
+
+
+            if (obj.status_code) {
+                const dlDiv = document.createElement('div');
+                const downloadBtn = document.createElement('a');
+                dlDiv.appendChild(downloadBtn);
+                downloadBtn.classList.add('outline', 'download');
+                downloadBtn.setAttribute('role', 'button');
+
+                if (obj.status_code !== 200) {
+                    div.classList.add('unavailable');
+                    downloadBtn.textContent = 'N/A';
+                    downloadBtn.setAttribute('disabled', '');
+
+                    dlDiv.setAttribute('data-placement', 'left');
+                    dlDiv.setAttribute('data-tooltip', `Got a ${obj.status_code} response at crawl time`);
+                } else {
+                    const contentFile = obj.contentFile;
+                    const filename = contentFile.split('/').pop();
+                    downloadBtn.textContent = 'Download';
+                    downloadBtn.href = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
+                }
+
+                entry.appendChild(dlDiv);
+            }
+
+            return entry;
+        }
+
+        // Function provided for compatibility with the hardcoded content links in site
+        function openSubDoc(contentID, _) {
+            window.location.href = "{{ base_url }}/content/?contentID=" + contentID;
+        }
+    </script>
+
+    <style>
+        ul.content-list {
+            padding: 5px;
+        }
+
+        ul.content-list li {
+            list-style-type: none;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.5);
+        }
+
+        ul.content-list li p {
+            margin: 0;
+        }
+
+        .aa-SubmitButton {
+            display: none;
+        }
+
+        .content-entry, .product-header {
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .product-image img {
+            max-height: 200px;
+        }
+
+        .product-content {
+            margin-top: 50px;
+        }
+
+        details details {
+            margin-left: 1em;
+        }
+
+        .pre {
+            font-family: monospace;
+        }
+
+        .download-box {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+    </style>
+
+    {% block head %}{% endblock %}
+</head>
+<body>
+
+<nav class="{% block nav_class %}container{% endblock %}">
+    <ul>
+        <li><strong><a href="{{ base_url }}/">Toshiba/Dynabook Drivers and Manuals Archive</a></strong></li>
+    </ul>
+    <ul>
+        <li><a href="#">Source code</a></li>
+    </ul>
+</nav>
+
+<main class="{% block main_class %}container{% endblock %}">
+    {% block content %}{% endblock %}
+</main>
+
+<footer class="{% block footer_class %}container{% endblock %}">
+    {% block footer %}{% endblock %}
+</footer>
+
+<script>
+    document.body.setAttribute('data-theme', window.appearance);
+    window.addEventListener('appearance-changed', function (e) {
+        document.body.removeAttribute('data-theme');
+        document.body.setAttribute('data-theme', e.detail);
+    });
+</script>
+
+</body>
+</html>
