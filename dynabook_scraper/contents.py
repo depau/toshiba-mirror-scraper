@@ -12,6 +12,8 @@ from tqdm import tqdm
 
 from dynabook_scraper.common import content_dir, run_concurrently, download_file, downloads_dir
 
+CONCURRENCY = 10
+
 
 def handle_error(cid: str, details: dict[str, Any], out_dir: Path):
     shutil.rmtree(out_dir)
@@ -110,7 +112,7 @@ async def download_contents():
         await download_content(detail)
         progress.update()
 
-    await run_concurrently(20, coro, details)
+    await run_concurrently(CONCURRENCY, coro, details)
 
 
 def cli_download_contents():
