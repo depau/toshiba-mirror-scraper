@@ -141,7 +141,7 @@ class ContentDownloader:
             return
 
         async with aiofiles.open(content_dir / f"{content.contentID}.json", "wb") as f:
-            await json.adump(details, f, indent=2)
+            await json.adump(details, f)
 
     async def download_contents(self):
         progress = tqdm(total=len(self.contents), desc="Downloading contents")

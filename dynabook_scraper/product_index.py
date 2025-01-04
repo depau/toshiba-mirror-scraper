@@ -94,7 +94,7 @@ async def gen_product_index(all_products, families, info, mid):
     product = remove_null_fields(product)
 
     async with aiofiles.open(product_dir / f"{mid}.json", "wb") as f:
-        await json.adump(product, f, indent=2)
+        await json.adump(product, f)
 
 
 def cli_gen_products_index():

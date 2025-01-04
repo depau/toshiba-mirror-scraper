@@ -32,11 +32,11 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
 
     manuals_and_specs = remove_null_fields(extract_json_var(page, "manualsSpecsJsonArr"))
     async with aiofiles.open(product_dir / "manuals_and_specs.json", "wb") as f:
-        await json.adump(manuals_and_specs, f, indent=2)
+        await json.adump(manuals_and_specs, f)
 
     kb = remove_null_fields(extract_json_var(page, "knowledgeBaseJsonArr"))
     async with aiofiles.open(product_dir / "knowledge_base.json", "wb") as f:
-        await json.adump(kb, f, indent=2)
+        await json.adump(kb, f)
 
     driver_contents = {}
 
@@ -62,11 +62,7 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
         drivers[os_name] = list(ingest_drivers(extract_json_var(os_page, "driversUpdatesJsonArr")))
 
     async with aiofiles.open(product_dir / "drivers.json", "wb") as f:
-        await json.adump(
-            {"contents": driver_contents, "drivers": drivers},
-            f,
-            indent=2,
-        )
+        await json.adump({"contents": driver_contents, "drivers": drivers}, f)
 
 
 async def parse_products(products_list: Path = data_dir / "all_products_flat.json"):

@@ -34,7 +34,7 @@ async def scrape_product_html(session: aiohttp.ClientSession, mid: str):
 
     os_list = [i for i in extract_json_var(page, "partNumOSJSONArr") if i["osId"] != "-1"]
     async with aiofiles.open(product_dir / "operating_systems.json", "wb") as f:
-        await json.adump(os_list, f, indent=2)
+        await json.adump(os_list, f)
 
     for os_obj in os_list:
         os_id = os_obj["osId"]

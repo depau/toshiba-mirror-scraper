@@ -36,7 +36,7 @@ async def write_result_file(cid: str, url: str, status_code: int, filename: str)
         result["url"] = f"content/{cid}/{filename}"
 
     async with aiofiles.open(content_dir / f"{cid}_crawl_result.json", "w") as f:
-        await json.adump(result, f, indent=2)
+        await json.adump(result, f)
 
 
 async def download_content(details: dict[str, Any]):

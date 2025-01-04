@@ -4,7 +4,7 @@ import aiofiles
 import aiohttp
 
 from dynabook_scraper.utils.uvloop import async_run
-from dynabook_scraper.utils.common import extract_json_var, http_retry
+from dynabook_scraper.utils.common import extract_json_var, http_retry, remove_null_fields
 from dynabook_scraper.utils.paths import data_dir
 from .utils import json
 
@@ -28,7 +28,7 @@ async def scrape_products_list():
 
         async with aiofiles.open(data_dir / "all_products.json", "wb") as f:
             # noinspection PyTypeChecker
-            await json.adump(all_products, f, indent=2)
+            await json.adump(remove_null_fields(all_products), f)
 
         # Generate flat product list
         flat_products = {}
@@ -41,7 +41,7 @@ async def scrape_products_list():
 
         async with aiofiles.open(data_dir / "all_products_flat.json", "wb") as f:
             # noinspection PyTypeChecker
-            await json.adump(flat_products, f, indent=2)
+            await json.adump(flat_products, f)
 
 
 def cli_scrape_products_list():
