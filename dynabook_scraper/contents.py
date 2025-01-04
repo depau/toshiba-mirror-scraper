@@ -1,4 +1,3 @@
-import asyncio
 import os
 import shutil
 import traceback
@@ -12,8 +11,8 @@ from tqdm import tqdm
 
 from dynabook_scraper.utils.common import run_concurrently, download_file
 from .utils import json
-from .utils.uvloop import async_run
 from .utils.paths import content_dir, downloads_dir
+from .utils.uvloop import async_run
 
 CONCURRENCY = 10
 
@@ -79,6 +78,18 @@ async def download_content(details: dict[str, Any]):
                 path = Path(link["href"])
                 await download_file(
                     url_base + "/" + link["href"],
+                    out_dir / path.parent,
+                    out_filename=path.name,
+                )
+
+            # Find any scripts or stylesheets
+            for tag in soup.find_all(["script", "link"], src=True):
+                src = tag["src"]
+                if src.startswith("http") or src.startswith("/"):
+                    continue
+                path = Path(src)
+                await download_file(
+                    url_base + "/" + src,
                     out_dir / path.parent,
                     out_filename=path.name,
                 )
