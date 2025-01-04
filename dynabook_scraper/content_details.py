@@ -1,16 +1,19 @@
 import asyncio
 import dataclasses
-import json
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Dict, OrderedDict
 from urllib.parse import urlencode
 
+import aiofiles
 import aiohttp
 import bs4
 from tqdm import tqdm
 
-from dynabook_scraper.common import products_dir, run_concurrently, content_dir
+from dynabook_scraper.utils.common import run_concurrently, remove_null_fields, http_retry
+from .utils.uvloop import async_run
+from .utils.paths import products_dir, content_dir
+from .utils import json
 
 
 @dataclass
@@ -45,6 +48,7 @@ class ContentDownloader:
         if new_id not in self.contents:
             self.contents[new_id] = new_content
 
+    @http_retry
     async def _fetch_regular_content(self, content: Content) -> dict[str, Any]:
         async with aiohttp.ClientSession() as session:
             params = OrderedDict[str, str]()
@@ -71,9 +75,10 @@ class ContentDownloader:
                     for version in resp["contentVersion"]:
                         self.add_version(content, version["contentID"])
 
-                return resp
+                return remove_null_fields(resp)
 
     @staticmethod
+    @http_retry
     async def _fetch_static_content(content: Content) -> dict[str, Any]:
         async with aiohttp.ClientSession() as session:
             async with session.get(
@@ -98,6 +103,7 @@ class ContentDownloader:
                 return {
                     "contentID": content.contentID,
                     "contentType": "scraper-swf",
+                    "originalContentType": content.contentType,
                     "contentFile": iframe.attrs["src"],
                 }
             else:
@@ -134,8 +140,8 @@ class ContentDownloader:
             tqdm.write(f"Warning: Failed to fetch content details for {content} due to invalid content type")
             return
 
-        with open(content_dir / f"{content.contentID}.json", "w") as f:
-            json.dump(details, f, indent=2)
+        async with aiofiles.open(content_dir / f"{content.contentID}.json", "wb") as f:
+            await json.adump(details, f, indent=2)
 
     async def download_contents(self):
         progress = tqdm(total=len(self.contents), desc="Downloading contents")
@@ -161,11 +167,8 @@ def gather_drivers(downloader: ContentDownloader):
         with open(f) as file:
             j = json.load(file)
 
-            for os_id, drivers in j.items():
-                if not drivers:
-                    continue
-                for driver in drivers:
-                    downloader.ingest(driver)
+            for _, driver in j["contents"].items():
+                downloader.ingest(driver)
 
 
 def gather_knowledge_base(downloader: ContentDownloader):
@@ -193,16 +196,16 @@ def gather_manuals_and_specs(downloader: ContentDownloader):
 def cli_scrape_driver_contents():
     downloader = ContentDownloader()
     gather_drivers(downloader)
-    asyncio.run(downloader.download_contents())
+    async_run(downloader.download_contents())
 
 
 def cli_scrape_kb_contents():
     downloader = ContentDownloader()
     gather_knowledge_base(downloader)
-    asyncio.run(downloader.download_contents())
+    async_run(downloader.download_contents())
 
 
 def cli_scrape_manuals_contents():
     downloader = ContentDownloader()
     gather_manuals_and_specs(downloader)
-    asyncio.run(downloader.download_contents())
+    async_run(downloader.download_contents())

@@ -1,11 +1,15 @@
 import asyncio
-import json
 
+import aiofiles
 import aiohttp
 
-from dynabook_scraper.common import data_dir, extract_json_var
+from dynabook_scraper.utils.uvloop import async_run
+from dynabook_scraper.utils.common import extract_json_var, http_retry
+from dynabook_scraper.utils.paths import data_dir
+from .utils import json
 
 
+@http_retry
 async def scrape_products_list():
     async with aiohttp.ClientSession() as session:
         async with session.get("https://support.dynabook.com/drivers") as response:
@@ -22,9 +26,9 @@ async def scrape_products_list():
                 if "fimg" in family:
                     family["fimg"] = family["fimg"].strip()
 
-        with open(data_dir / "all_products.json", "w") as f:
+        async with aiofiles.open(data_dir / "all_products.json", "wb") as f:
             # noinspection PyTypeChecker
-            json.dump(all_products, f, indent=2)
+            await json.adump(all_products, f, indent=2)
 
         # Generate flat product list
         flat_products = {}
@@ -35,13 +39,13 @@ async def scrape_products_list():
                     model["fid"] = family["fid"]
                     flat_products[model["mid"]] = model
 
-        with open(data_dir / "all_products_flat.json", "w") as f:
+        async with aiofiles.open(data_dir / "all_products_flat.json", "wb") as f:
             # noinspection PyTypeChecker
-            json.dump(flat_products, f, indent=2)
+            await json.adump(flat_products, f, indent=2)
 
 
 def cli_scrape_products_list():
-    asyncio.run(scrape_products_list())
+    async_run(scrape_products_list())
 
 
 if __name__ == "__main__":

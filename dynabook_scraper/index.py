@@ -1,30 +1,33 @@
-import json
-from functools import lru_cache
 from typing import Any
 
+import aiofiles
+from cache import AsyncLRU
 from tqdm import tqdm
 
-from dynabook_scraper.common import data_dir, products_dir, content_dir, assets_dir
+from dynabook_scraper.utils.common import remove_null_fields, run_concurrently
+from .utils import json
+from .utils.paths import data_dir, product_assets_dir, products_dir, content_dir
+from .utils.uvloop import async_run
 
 
-@lru_cache(maxsize=81920)
-def get_content_info(cid: str) -> dict[str, Any]:
+@AsyncLRU(maxsize=8192)
+async def get_content_info(cid: str) -> dict[str, Any]:
     info = {}
-    with open(content_dir / f"{cid}.json") as f:
-        info.update(json.load(f))
+    async with aiofiles.open(content_dir / f"{cid}.json") as f:
+        info.update(await json.aload(f))
     result = content_dir / f"{cid}_crawl_result.json"
     if result.is_file():
-        with open(result) as f:
-            info.update(json.load(f))
+        async with aiofiles.open(result) as f:
+            info.update(await json.aload(f))
     return info
 
 
-def gen_products_index() -> dict[str, Any]:
-    with open(data_dir / "all_products.json") as f:
-        all_products = json.load(f)
+async def gen_products_index():
+    async with aiofiles.open(data_dir / "all_products.json") as f:
+        all_products = await json.aload(f)
 
-    with open(data_dir / "all_products_flat.json") as f:
-        flat_products = json.load(f)
+    async with aiofiles.open(data_dir / "all_products_flat.json") as f:
+        flat_products = await json.aload(f)
 
     families = {}
     for pid, product_type in all_products.items():
@@ -33,12 +36,15 @@ def gen_products_index() -> dict[str, Any]:
 
     progress = tqdm(total=len(flat_products), desc="Generating products indices", unit="products")
 
-    for mid, info in flat_products.items():
+    async def coro(mid):
+        product_info = flat_products[mid]
+        await gen_product_index(all_products, families, product_info, mid)
         progress.update()
-        gen_product_index(all_products, families, info, mid)
+
+    await run_concurrently(10, coro, flat_products.keys())
 
 
-def gen_product_index(all_products, families, info, mid):
+async def gen_product_index(all_products, families, info, mid):
     product_type = all_products[info["pid"]]
     family = families[info["fid"]]
     product = {
@@ -54,37 +60,34 @@ def gen_product_index(all_products, families, info, mid):
         "manuals_and_specs": [],
         "drivers": {},
     }
-    with open(products_dir / str(mid) / "operating_systems.json") as f:
-        _oses = json.load(f)
-        oses = {os["osId"]: os["osNameAndType"] for os in _oses}
+
     # Load knowledge base
-    with open(products_dir / str(mid) / "knowledge_base.json") as f:
-        kb = json.load(f)
+    async with aiofiles.open(products_dir / str(mid) / "knowledge_base.json") as f:
+        kb = await json.aload(f)
     for item in kb:
-        item.update(get_content_info(item["contentID"]))
+        item.update(await get_content_info(item["contentID"]))
     product["knowledge_base"] = kb
+
     # Load manuals and specs
-    with open(products_dir / str(mid) / "manuals_and_specs.json") as f:
-        manuals_and_specs = json.load(f)
+    async with aiofiles.open(products_dir / str(mid) / "manuals_and_specs.json") as f:
+        manuals_and_specs = await json.aload(f)
     for item in manuals_and_specs:
-        item.update(get_content_info(item["contentID"]))
+        item.update(await get_content_info(item["contentID"]))
     product["manuals_and_specs"] = manuals_and_specs
+
     # Load drivers
-    with open(products_dir / str(mid) / "drivers.json") as f:
-        drivers = json.load(f)
-    for os_id, os_drivers in drivers.items():
-        os_name = "Any" if os_id == "generic" else oses[os_id]
-        product["drivers"][os_name] = []
+    async with aiofiles.open(products_dir / str(mid) / "drivers.json") as f:
+        drivers: dict[str, Any] = await json.aload(f)
+    product["drivers"] = drivers
 
-        if not os_drivers:
-            continue
+    for _, driver in product["drivers"]["contents"].items():
+        driver.update(await get_content_info(driver["contentID"]))
 
-        for driver in os_drivers:
-            driver.update(get_content_info(driver["contentID"]))
-            product["drivers"][os_name].append(driver)
-    with open(assets_dir / "products" / f"{mid}.json", "w") as f:
-        json.dump(product, f, indent=2)
+    product = remove_null_fields(product)
+
+    async with aiofiles.open(product_assets_dir / f"{mid}.json", "wb") as f:
+        await json.adump(product, f, indent=2)
 
 
 def cli_gen_products_index():
-    gen_products_index()
+    async_run(gen_products_index())

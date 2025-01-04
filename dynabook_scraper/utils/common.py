@@ -1,31 +1,13 @@
 import asyncio
-import json
-import os
 import re
-import sys
 from pathlib import Path
-from typing import Callable, Awaitable, TypeVar, Iterable, Any, List
+from typing import Callable, Awaitable, Iterable, Any, List
 
+import aiofiles
 import aiohttp
 from tqdm import tqdm
 
-data_dir = Path(os.environ.get("DATA_DIR", "data"))
-data_dir.mkdir(exist_ok=True)
-
-assets_dir = data_dir / "assets"
-assets_dir.mkdir(exist_ok=True)
-
-html_dir = data_dir / "html"
-html_dir.mkdir(exist_ok=True)
-
-products_dir = data_dir / "products"
-products_dir.mkdir(exist_ok=True)
-
-content_dir = data_dir / "content"
-content_dir.mkdir(exist_ok=True)
-
-downloads_dir = assets_dir / "content"
-downloads_dir.mkdir(exist_ok=True)
+from . import json
 
 
 def extract_json_var(script: str, var_name: str) -> dict:
@@ -34,17 +16,10 @@ def extract_json_var(script: str, var_name: str) -> dict:
         raise ValueError(f"Could not find JSON variable {var_name}")
 
     var = match.group(1)
-    # try:
     return json.loads(var)
-    # except json.JSONDecodeError:
-    #     print("Could not parse JSON, trying to evaluate JS")
-    #     return js2py.eval_js(var)
 
 
-T = TypeVar("T")
-
-
-async def run_concurrently(
+async def run_concurrently[T](
     parallel: int,
     func: Callable[..., Awaitable[T]],
     args_iter: Iterable[Any],
@@ -60,22 +35,21 @@ async def run_concurrently(
     return results
 
 
-class DebugContext:
-    def __init__(self, values: dict[str, any] = None):
-        self._values = values or {}
+def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
+    async def wrapper(*args, **kwargs):
+        exc = None
+        for i in range(3):
+            try:
+                return await fn(*args, **kwargs)
+            except (aiohttp.ClientConnectorError, aiohttp.ConnectionTimeoutError) as e:
+                tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
+                exc = e
+        raise exc
 
-    def __enter__(self):
-        return self._values
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        # Print the debug context if an exception occurred but do not silence it
-        if exc_type:
-            print(f"Debug context: {self._values}", file=sys.stderr)
-
-    def with_values(self, **values):
-        return DebugContext({**self._values, **values})
+    return wrapper
 
 
+@http_retry
 async def download_file(
     url: str, out_dir: Path, out_filename: str | None = None, session: aiohttp.ClientSession = None
 ):
@@ -96,7 +70,15 @@ async def download_file(
                 desc=f"Downloading {filename}",
                 leave=False,
             ) as progress_bar:
-                with open(out_dir / filename, "wb") as f:
+                async with aiofiles.open(out_dir / filename, "wb") as f:
                     async for chunk in response.content.iter_chunked(1024):
-                        f.write(chunk)
+                        await f.write(chunk)
                         progress_bar.update(len(chunk))
+
+
+def remove_null_fields[T](obj: T) -> T:
+    if isinstance(obj, list):
+        return [remove_null_fields(i) for i in obj]
+    elif isinstance(obj, dict):
+        return {k: remove_null_fields(v) for k, v in obj.items() if v is not None}
+    return obj

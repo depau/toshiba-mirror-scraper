@@ -1,16 +1,19 @@
 import asyncio
-import json
 import os
 import shutil
 import traceback
 from pathlib import Path
 from typing import Any
 
+import aiofiles
 import aiohttp
 import bs4
 from tqdm import tqdm
 
-from dynabook_scraper.common import content_dir, run_concurrently, download_file, downloads_dir
+from dynabook_scraper.utils.common import run_concurrently, download_file
+from .utils import json
+from .utils.uvloop import async_run
+from .utils.paths import content_dir, downloads_dir
 
 CONCURRENCY = 10
 
@@ -23,7 +26,7 @@ def handle_error(cid: str, details: dict[str, Any], out_dir: Path):
         traceback.print_exc(file=f)
 
 
-def write_result_file(cid: str, url: str, status_code: int, filename: str):
+async def write_result_file(cid: str, url: str, status_code: int, filename: str):
     result = {
         "contentID": cid,
         "url": url,
@@ -32,8 +35,8 @@ def write_result_file(cid: str, url: str, status_code: int, filename: str):
     if 200 <= status_code < 300:
         result["url"] = f"content/{cid}/{filename}"
 
-    with open(content_dir / f"{cid}_crawl_result.json", "w") as f:
-        f.write(json.dumps(result, indent=2))
+    async with aiofiles.open(content_dir / f"{cid}_crawl_result.json", "w") as f:
+        await json.adump(result, f, indent=2)
 
 
 async def download_content(details: dict[str, Any]):
@@ -46,11 +49,15 @@ async def download_content(details: dict[str, Any]):
     try:
         if content_type in ("DL", "UG", "scraper-static-content"):
             url = details["contentFile"]
+            if not url:
+                tqdm.write(f"Content file not found: [{cid}] {details.get('contentFile')}")
+                return
+
             filename = Path(url).name
             if (out_dir / filename).is_file():
                 return
             await download_file(url, out_dir)
-            write_result_file(cid, url, 200, filename)
+            await write_result_file(cid, url, 200, filename)
 
         elif content_type == "scraper-swf":
             filename = "index.html"
@@ -58,8 +65,9 @@ async def download_content(details: dict[str, Any]):
             url_base = url.rsplit("/", 1)[0]
             await download_file(url, out_dir, out_filename="index.html")
 
-            with open(out_dir / "index.html") as f:
-                html = f.read()
+            # Read as bytes since it looks like some files are not UTF-8 encoded
+            async with aiofiles.open(out_dir / "index.html", "rb") as f:
+                html = await f.read()
 
             soup = bs4.BeautifulSoup(html, "html.parser")
 
@@ -80,9 +88,9 @@ async def download_content(details: dict[str, Any]):
             if embed:
                 await download_file(url_base + "/" + embed["src"], out_dir)
 
-            write_result_file(cid, url, 200, filename)
+            await write_result_file(cid, url, 200, filename)
     except aiohttp.ClientResponseError as e:
-        write_result_file(cid, url, e.status, filename)
+        await write_result_file(cid, url, e.status, filename)
         if e.status == 404:
             tqdm.write(f"Content not found: [{cid}] {details.get('contentFile')}")
         else:
@@ -96,8 +104,8 @@ async def download_contents():
     for file in tqdm(os.listdir(content_dir), desc="Discovering content to download", unit="file"):
         if not file.endswith(".json") or file.endswith("_crawl_result.json"):
             continue
-        with open(content_dir / file) as f:
-            details.append(json.load(f))
+        async with aiofiles.open(content_dir / file) as f:
+            details.append(await json.aload(f))
 
     def sort_key(detail: dict[str, Any]):
         content_id = detail["contentID"]
@@ -116,4 +124,4 @@ async def download_contents():
 
 
 def cli_download_contents():
-    asyncio.run(download_contents())
+    async_run(download_contents())

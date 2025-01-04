@@ -1,11 +1,13 @@
 import asyncio
-import json
 from pathlib import Path
 
+import aiofiles
 import aiohttp
 from tqdm import tqdm
 
-from dynabook_scraper.common import assets_dir, run_concurrently, download_file
+from dynabook_scraper.utils.common import run_concurrently, download_file
+from .utils.paths import assets_dir
+from .utils import json
 
 
 async def download_asset(path: str):
@@ -23,8 +25,8 @@ async def download_asset(path: str):
 
 
 async def scrape_assets():
-    with open("data/all_products.json") as f:
-        all_products = json.load(f)
+    async with aiofiles.open("data/all_products.json") as f:
+        all_products = await json.aload(f)
 
     assets = []
     for pid, product_type in all_products.items():
@@ -40,4 +42,4 @@ async def scrape_assets():
 
 
 def cli_scrape_assets():
-    asyncio.run(scrape_assets())
+    async_run(scrape_assets())
