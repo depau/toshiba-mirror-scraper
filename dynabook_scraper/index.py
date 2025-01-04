@@ -11,7 +11,9 @@ from .utils.uvloop import async_run
 
 
 @AsyncLRU(maxsize=8192)
-async def get_content_info(cid: str) -> dict[str, Any]:
+async def get_content_info(cid: str) -> dict[str, Any] | None:
+    if not (content_dir / f"{cid}.json").is_file():
+        return None
     info = {}
     async with aiofiles.open(content_dir / f"{cid}.json") as f:
         info.update(await json.aload(f))
@@ -65,14 +67,18 @@ async def gen_product_index(all_products, families, info, mid):
     async with aiofiles.open(products_dir / str(mid) / "knowledge_base.json") as f:
         kb = await json.aload(f)
     for item in kb:
-        item.update(await get_content_info(item["contentID"]))
+        content = await get_content_info(item["contentID"])
+        if content:
+            item.update(content)
     product["knowledge_base"] = kb
 
     # Load manuals and specs
     async with aiofiles.open(products_dir / str(mid) / "manuals_and_specs.json") as f:
         manuals_and_specs = await json.aload(f)
     for item in manuals_and_specs:
-        item.update(await get_content_info(item["contentID"]))
+        content = await get_content_info(item["contentID"])
+        if content:
+            item.update(content)
     product["manuals_and_specs"] = manuals_and_specs
 
     # Load drivers
@@ -81,7 +87,9 @@ async def gen_product_index(all_products, families, info, mid):
     product["drivers"] = drivers
 
     for _, driver in product["drivers"]["contents"].items():
-        driver.update(await get_content_info(driver["contentID"]))
+        content = await get_content_info(driver["contentID"])
+        if content:
+            driver.update(content)
 
     product = remove_null_fields(product)
 
