@@ -44,6 +44,7 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
             except (aiohttp.ClientConnectorError, aiohttp.ConnectionTimeoutError) as e:
                 tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
                 exc = e
+                await asyncio.sleep(2**i)
         raise exc
 
     return wrapper
