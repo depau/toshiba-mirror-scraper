@@ -47,6 +47,16 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
                 tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
                 exc = e
                 await asyncio.sleep(2**i)
+            except aiohttp.ClientResponseError as e:
+                if e.status == 429:
+                    tqdm.write(f"Rate limited: {e} - attempt: {i + 1}")
+                    exc = e
+                    if "Retry-After" in e.headers:
+                        await asyncio.sleep(int(e.headers["Retry-After"]))
+                    else:
+                        await asyncio.sleep(2 ** (i + 1))
+                else:
+                    raise e
         raise exc
 
     return wrapper
