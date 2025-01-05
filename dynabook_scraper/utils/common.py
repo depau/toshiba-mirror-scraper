@@ -41,7 +41,7 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
         for i in range(5):
             try:
                 return await fn(*args, **kwargs)
-            except (aiohttp.ClientConnectorError, aiohttp.ConnectionTimeoutError) as e:
+            except (aiohttp.ClientConnectorError, aiohttp.ConnectionTimeoutError, TimeoutError) as e:
                 tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
                 exc = e
                 await asyncio.sleep(2**i)
