@@ -10,6 +10,27 @@ from .utils.paths import data_dir, product_dir, products_work_dir, content_dir
 from .utils.uvloop import async_run
 
 
+def filter_content(content: dict[str, Any]) -> dict[str, Any]:
+    keep_keys = {
+        "contentID",
+        "contentType",
+        "title",
+        "heading",
+        "fileVersion",
+        "fileSize",
+        "orgPubDate",
+        "startDate",
+        "createDate",
+        "status_code",
+        "contentFile",
+        "mirror_hostname",
+        "mirror_url",
+        "rescue_strategy",
+        "url",
+    }
+    return {k: v for k, v in content.items() if k in keep_keys}
+
+
 @AsyncLRU(maxsize=8192)
 async def get_content_info(cid: str) -> dict[str, Any] | None:
     if not (content_dir / f"{cid}.json").is_file():
@@ -21,7 +42,7 @@ async def get_content_info(cid: str) -> dict[str, Any] | None:
     if result.is_file():
         async with aiofiles.open(result) as f:
             info.update(await json.aload(f))
-    return info
+    return filter_content(info)
 
 
 async def gen_products_index():
