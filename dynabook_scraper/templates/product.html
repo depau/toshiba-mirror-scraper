@@ -95,7 +95,7 @@
 
                 const contents = product.drivers.contents;
 
-                for (const [os, drivers] of Object.entries(product.drivers.drivers)) {
+                for (const [os, drivers] of Object.entries(product.drivers.drivers).sort()) {
                     if (drivers.length === 0) {
                         continue;
                     }
