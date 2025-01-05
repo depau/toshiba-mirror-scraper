@@ -16,6 +16,13 @@
         var _images = null;
         var _productsPromise = null;
 
+        const archiveNameMap = {
+            "archive.org": "the Internet Archive",
+            "web.archive.org": "the Wayback Machine",
+            "www.archive-it.org": "Archive-It",
+            "content.us.dynabook.com": "Dynabook",
+        };
+
         async function loadProducts() {
             if (_products !== null && _images !== null) {
                 return;
@@ -88,6 +95,7 @@
                 const dlDiv = document.createElement('div');
                 const downloadBtn = document.createElement('a');
                 dlDiv.appendChild(downloadBtn);
+                dlDiv.setAttribute('data-placement', 'left');
                 downloadBtn.classList.add('outline', 'download');
                 downloadBtn.setAttribute('role', 'button');
 
@@ -96,7 +104,6 @@
                     downloadBtn.textContent = 'N/A';
                     downloadBtn.setAttribute('disabled', '');
 
-                    dlDiv.setAttribute('data-placement', 'left');
                     dlDiv.setAttribute('data-tooltip', `Got a ${obj.status_code} response at crawl time`);
                 } else {
                     const contentFile = obj.contentFile;
@@ -105,8 +112,9 @@
                     downloadBtn.href = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
 
                     if (obj.mirror_hostname) {
-                        dlDiv.setAttribute('data-placement', 'left');
-                        dlDiv.setAttribute('data-tooltip', `From ${obj.mirror_hostname}`);
+                        dlDiv.setAttribute('data-tooltip', `From ${archiveNameMap[obj.mirror_hostname] ?? obj.mirror_hostname}`);
+                    } else {
+                        dlDiv.setAttribute('data-tooltip', `Original source`);
                     }
                 }
 

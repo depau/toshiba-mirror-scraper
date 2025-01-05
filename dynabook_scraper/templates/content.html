@@ -81,7 +81,7 @@
                 if (crawlResult.status_code === 200) {
                     let via = "";
                     if (crawlResult.mirror_url) {
-                        via = ` via <a href="${crawlResult.mirror_url}" target="_blank" rel="noopener" referrerpolicy="no-referrer">${crawlResult.mirror_hostname}</a>`;
+                        via = ` via <a href="${crawlResult.mirror_url}" target="_blank" rel="noopener" referrerpolicy="no-referrer">${archiveNameMap[crawlResult.mirror_hostname] ?? crawlResult.mirror_hostname}</a>`;
                     }
                     let originalUrl = "";
                     if (crawlResult.original_url) {
