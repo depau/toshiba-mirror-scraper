@@ -2,6 +2,7 @@ import io
 
 try:
     import orjson
+    from orjson import JSONDecodeError
 
     loads = orjson.loads
 

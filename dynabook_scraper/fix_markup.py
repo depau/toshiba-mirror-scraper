@@ -61,7 +61,11 @@ async def fix_markup(content_id: str, markup: str) -> str:
 async def fix_content_markup(content_file_path: Path):
     try:
         async with aiofiles.open(content_file_path) as f:
-            content = await json.aload(f)
+            try:
+                content = await json.aload(f)
+            except json.JSONDecodeError as e:
+                print(f"Error decoding JSON for {content_file_path}: {e}")
+                return
 
         cid = content.get("contentID")
         if not cid:
