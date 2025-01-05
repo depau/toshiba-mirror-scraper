@@ -1,5 +1,6 @@
-import asyncio
 import dataclasses
+import os
+import re
 from collections import OrderedDict
 from dataclasses import dataclass
 from typing import Any, Dict, OrderedDict
@@ -11,9 +12,10 @@ import bs4
 from tqdm import tqdm
 
 from dynabook_scraper.utils.common import run_concurrently, remove_null_fields, http_retry
-from .utils.uvloop import async_run
-from .utils.paths import products_work_dir, content_dir
+from .fix_markup import toshiba_support_re, dynabook_support_re
 from .utils import json
+from .utils.paths import products_work_dir, content_dir
+from .utils.uvloop import async_run
 
 
 @dataclass
@@ -193,6 +195,34 @@ def gather_manuals_and_specs(downloader: ContentDownloader):
                 downloader.ingest(manual)
 
 
+def gather_content_links(downloader: ContentDownloader):
+    files = [i for i in os.listdir(content_dir) if i.endswith(".json") and not i.endswith("_crawl_result.json")]
+
+    js_link_re = re.compile(r"javascript:openSubDoc\(['\"](\d+)['\"]\s*,\s*['\"]\w+['\"]\)")
+
+    for file in tqdm(files, desc="Finding content links", unit="file"):
+        with open(content_dir / file) as f:
+            raw = f.read()
+
+            matches = [
+                toshiba_support_re.findall(raw),
+                dynabook_support_re.findall(raw),
+                js_link_re.findall(raw),
+            ]
+
+            for match_group in matches:
+                if not match_group:
+                    continue
+                for match in match_group:
+                    downloader.ingest(
+                        {
+                            "contentID": match,
+                            "contentType": "DL",
+                            "sor": "undefined",
+                        }
+                    )
+
+
 def cli_scrape_driver_contents():
     downloader = ContentDownloader()
     gather_drivers(downloader)
@@ -208,4 +238,10 @@ def cli_scrape_kb_contents():
 def cli_scrape_manuals_contents():
     downloader = ContentDownloader()
     gather_manuals_and_specs(downloader)
+    async_run(downloader.download_contents())
+
+
+def cli_scrape_content_links():
+    downloader = ContentDownloader()
+    gather_content_links(downloader)
     async_run(downloader.download_contents())
