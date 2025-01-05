@@ -27,11 +27,13 @@ def handle_error(cid: str, details: dict[str, Any], out_dir: Path):
         traceback.print_exc(file=f)
 
 
-async def write_result_file(cid: str, url: str, status_code: int, filename: str, source: str):
+async def write_result_file(cid: str, url: str, status_code: int, filename: str, mirror_url: str):
     result = {
         "contentID": cid,
-        "url": url,
+        "original_url": url,
         "status_code": status_code,
+        "mirror_url": mirror_url,
+        "mirror_hostname": urlparse(mirror_url).hostname,
     }
     if 200 <= status_code < 300:
         result["url"] = f"content/{cid}/{filename}"
@@ -53,6 +55,8 @@ async def download_from_memento(url: str, out_dir: Path) -> str:
 
         tqdm.write(f"Downloading from Memento {hostname}: {url}")
         await download_file(archive_url, out_dir)
+
+        return archive_url
 
 
 async def download_content(details: dict[str, Any]):
@@ -77,12 +81,11 @@ async def download_content(details: dict[str, Any]):
 
             try:
                 await download_file(url, out_dir)
-                await write_result_file(cid, url, 200, filename, "dynabook.com")
+                await write_result_file(cid, url, 200, filename, url)
             except aiohttp.ClientResponseError as e:
                 if e.status == 404:
-                    breakpoint()
-                    await download_from_memento(url, out_dir)
-                    await write_result_file(cid, url, 200, filename, "archive.org")
+                    source = await download_from_memento(url, out_dir)
+                    await write_result_file(cid, url, 200, filename, source)
                 else:
                     raise
 
@@ -128,7 +131,7 @@ async def download_content(details: dict[str, Any]):
             if embed:
                 await download_file(url_base + "/" + embed["src"], out_dir)
 
-            await write_result_file(cid, url, 200, filename, "dynabook.com")
+            await write_result_file(cid, url, 200, filename, url)
     except aiohttp.ClientResponseError as e:
         await write_result_file(cid, url, e.status, filename, e.request_info.url.host)
         if e.status == 404:
