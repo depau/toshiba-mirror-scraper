@@ -1,4 +1,3 @@
-import asyncio
 from pathlib import Path
 
 import aiofiles
@@ -11,8 +10,8 @@ from dynabook_scraper.utils.common import (
     http_retry,
 )
 from .utils import json
-from .utils.uvloop import async_run
 from .utils.paths import data_dir, html_dir, products_work_dir
+from .utils.uvloop import async_run
 
 CONCURRENCY = 20
 
@@ -36,8 +35,9 @@ async def scrape_product_html(session: aiohttp.ClientSession, mid: str):
     async with aiofiles.open(product_dir / "operating_systems.json", "wb") as f:
         await json.adump(os_list, f)
 
-    for os_obj in os_list:
-        os_id = os_obj["osId"]
+    # Only scrape the first OS since it contains all the drivers anyway
+    if os_list:
+        os_id = os_list[0]["osId"]
 
         async with session.get(
             f"https://support.dynabook.com/support/modelHome?freeText={mid}&osId={os_id}"

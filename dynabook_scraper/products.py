@@ -82,8 +82,8 @@ async def parse_product(mid: str):
     drivers = defaultdict(list)
 
     if os_map:
-        any_os = next(iter(os_map.keys()))
-        async with aiofiles.open(product_html_dir / f"os_{any_os}.html") as f:
+        first_os = os_list[0]["osId"]
+        async with aiofiles.open(product_html_dir / f"os_{first_os}.html") as f:
             os_page = await f.read()
             for driver in remove_null_fields(extract_json_var(os_page, "driversUpdatesJsonArr")):
                 content_id = str(driver["contentID"])
