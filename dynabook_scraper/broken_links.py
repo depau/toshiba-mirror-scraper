@@ -105,7 +105,7 @@ async def scrape_broken_links():
         await scrape_broken_link(details)
         progress.update()
 
-    await run_concurrently(15, coro, broken_links)
+    await run_concurrently(5, coro, broken_links)
 
 
 def cli_scrape_broken_links():
