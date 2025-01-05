@@ -1,4 +1,5 @@
 import asyncio
+import random
 import re
 from pathlib import Path
 from typing import Callable, Awaitable, Iterable, Any, List
@@ -59,7 +60,7 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
                     if "Retry-After" in e.headers:
                         await asyncio.sleep(int(e.headers["Retry-After"]))
                     else:
-                        await asyncio.sleep(2 ** (i + 1))
+                        await asyncio.sleep(2 ** (i + 1) + random.randint(0, 10000) / 1000)
                 else:
                     raise e
         raise exc
