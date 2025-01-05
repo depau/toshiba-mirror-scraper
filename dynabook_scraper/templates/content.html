@@ -93,6 +93,7 @@
 
                     const downloadLink = document.createElement('a');
                     downloadLink.setAttribute('role', 'button');
+                    downloadLink.classList.add('download');
                     downloadLink.href = `{{ base_url }}/assets/content/${contentID}/${filename}`;
                     downloadLink.innerHTML = `<span class="material-icons">file_download</span> Download`;
                     container.appendChild(downloadLink);
