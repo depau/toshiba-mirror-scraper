@@ -1,8 +1,10 @@
 import os
 import shutil
+import sys
 import traceback
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlparse
 
 import aiofiles
 import aiohttp
@@ -38,17 +40,18 @@ async def write_result_file(cid: str, url: str, status_code: int, filename: str,
         await json.adump(result, f)
 
 
-async def download_from_archive_org(url: str, out_dir: Path):
+async def download_from_memento(url: str, out_dir: Path) -> str:
     async with aiohttp.ClientSession() as session:
-        async with session.get(f"https://web.archive.org/wayback/available", params={"url": url}) as response:
+        async with session.get(f"https://timetravel.mementoweb.org/timegate/{url}", allow_redirects=False) as response:
+            if response.status != 302:
+                tqdm.write(f"Content not available on timetravel.mementoweb.org: {url}")
+                raise aiohttp.ClientResponseError(response.request_info, response.history, status=404)
             response.raise_for_status()
-            data = await response.json()
 
-        if "closest" not in data["archived_snapshots"] or data["archived_snapshots"]["closest"]["status"] != "200":
-            tqdm.write(f"Content not available on archive.org: {url}")
-            raise aiohttp.ClientResponseError(response.request_info, response.history, status=404)
+        archive_url = response.headers["Location"]
+        hostname = urlparse(archive_url).hostname
 
-        archive_url = data["archived_snapshots"]["closest"]["url"]
+        tqdm.write(f"Downloading from Memento {hostname}: {url}")
         await download_file(archive_url, out_dir)
 
 
@@ -61,7 +64,7 @@ async def download_content(details: dict[str, Any]):
 
     try:
         if content_type in ("DL", "UG", "scraper-static-content"):
-            url = details["contentFile"]
+            url = details.get("contentFile")
             if not url:
                 tqdm.write(f"Content file not found: [{cid}] {details.get('contentFile')}")
                 return
@@ -77,15 +80,16 @@ async def download_content(details: dict[str, Any]):
                 await write_result_file(cid, url, 200, filename, "dynabook.com")
             except aiohttp.ClientResponseError as e:
                 if e.status == 404:
-                    tqdm.write(f"Unavailable, trying archive.org: [{cid}] {details.get('contentFile')}")
-                    await download_from_archive_org(url, out_dir)
+                    breakpoint()
+                    await download_from_memento(url, out_dir)
                     await write_result_file(cid, url, 200, filename, "archive.org")
                 else:
                     raise
 
         elif content_type == "scraper-swf":
             filename = "index.html"
-            url = details["contentFile"]
+            url = details.get("contentFile")
+            assert url, f"Content file not found: [{cid}] {details.get('contentFile')}"
             url_base = url.rsplit("/", 1)[0]
             await download_file(url, out_dir, out_filename="index.html")
 
@@ -126,7 +130,7 @@ async def download_content(details: dict[str, Any]):
 
             await write_result_file(cid, url, 200, filename, "dynabook.com")
     except aiohttp.ClientResponseError as e:
-        await write_result_file(cid, url, e.status, filename)
+        await write_result_file(cid, url, e.status, filename, e.request_info.url.host)
         if e.status == 404:
             tqdm.write(f"Content not found: [{cid}] {details.get('contentFile')}")
         else:
@@ -141,7 +145,10 @@ async def download_contents():
         if not file.endswith(".json") or file.endswith("_crawl_result.json"):
             continue
         async with aiofiles.open(content_dir / file) as f:
-            details.append(await json.aload(f))
+            j = await json.aload(f)
+            if "contentID" not in j:
+                continue
+            details.append(j)
 
     def sort_key(detail: dict[str, Any]):
         content_id = detail["contentID"]
@@ -161,3 +168,12 @@ async def download_contents():
 
 def cli_download_contents():
     async_run(download_contents())
+
+
+def cli_download_content():
+    content_id = sys.argv[1]
+
+    with open(content_dir / f"{content_id}.json") as f:
+        details = json.load(f)
+
+    async_run(download_content(details))
