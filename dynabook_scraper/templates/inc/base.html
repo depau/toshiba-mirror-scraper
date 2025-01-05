@@ -199,7 +199,8 @@
     </ul>
     <ul>
         <li><a href="#">Source code</a></li>
-        <li><a href="#" onclick="toggleTheme()"><span class="material-icons">light_mode</span></a></li>
+        <li><a href="#" onclick="toggleTheme()"><span class="material-icons"
+                                                      id="night-mode-toggle">light_mode</span></a></li>
     </ul>
 </nav>
 
@@ -237,6 +238,9 @@
 
         html.setAttribute('data-theme', desiredTheme);
         document.body.setAttribute('data-theme', desiredTheme);
+
+        const otherTheme = desiredTheme === 'dark' ? 'light' : 'dark';
+        document.getElementById('night-mode-toggle').textContent = `${otherTheme}_mode`;
     }
 
     function getDesiredTheme() {
