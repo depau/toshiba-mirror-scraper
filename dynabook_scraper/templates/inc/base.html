@@ -72,7 +72,8 @@
             title.classList.add('title');
             const link = document.createElement('a');
             link.href = "{{ base_url }}/content/?contentID=" + obj.contentID;
-            link.textContent = obj.title ?? obj.fileVersion;
+            // Use innerHTML since some titles contain HTML entities
+            link.innerHTML = obj.title ?? obj.fileVersion;
             title.appendChild(link);
             div.appendChild(title);
 
