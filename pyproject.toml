@@ -16,6 +16,7 @@ dependencies = [
     "jq>=1.8.0",
     "orjson>=3.10.13; implementation_name == 'cpython'",
     "playwright>=1.49.1",
+    "sagemcom-api",
     "tqdm>=4.67.1",
     "uvloop>=0.21.0; implementation_name == 'cpython'",
 ]
@@ -60,3 +61,6 @@ line-length = 120
 
 [tool.ruff]
 line-length = 120
+
+[tool.uv.sources]
+sagemcom-api = { git = "https://github.com/djGrrr/python-sagemcom-api.git", rev = "master" }
