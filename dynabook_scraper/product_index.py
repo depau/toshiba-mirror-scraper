@@ -28,6 +28,7 @@ def filter_content(content: dict[str, Any]) -> dict[str, Any]:
         "rescue_strategy",
         "url",
         "tags",
+        "tagNames",
         "os",
     }
     return {k: v for k, v in content.items() if k in keep_keys}

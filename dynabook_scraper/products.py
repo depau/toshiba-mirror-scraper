@@ -88,6 +88,7 @@ async def parse_product(mid: str):
             for driver in remove_null_fields(extract_json_var(os_page, "driversUpdatesJsonArr")):
                 content_id = str(driver["contentID"])
                 driver["tags"] = driver.get("tags", "").split(",")
+                driver["tagNames"] = driver.get("tagNames", "").split(",")
                 driver["os"] = [tag for tag in driver["tags"] if tag in os_map]
                 driver_contents[content_id] = driver
 
