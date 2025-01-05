@@ -51,6 +51,14 @@
                 const dateElement = document.createElement('p');
                 dateElement.classList.add('date');
                 dateElement.textContent = `Published: ${date}`;
+
+                if (content.fileVersion) {
+                    dateElement.textContent += ` | Version ${content.fileVersion}`;
+                }
+                if (content.fileSize) {
+                    dateElement.textContent += ` | ${humanFileSize(content.fileSize)}`;
+                }
+
                 header.appendChild(dateElement);
             }
 
@@ -106,6 +114,46 @@
                     `;
                     root.appendChild(detailElement);
                 }
+            }
+
+            if (content.contentVersion && content.contentVersion.length > 0) {
+                const versionElement = document.createElement('details');
+                versionElement.classList.add('content-versions');
+                versionElement.innerHTML = `<summary>Other versions</summary>`;
+
+                const versionList = document.createElement('ul');
+                versionElement.appendChild(versionList);
+
+                const div = document.createElement('div');
+                const ul = document.createElement('ul');
+                ul.classList.add('content-list');
+                div.appendChild(ul);
+
+                for (const entry of content.contentVersion.sort((a, b) => b.fileVersion.localeCompare(a.fileVersion))) {
+                    const li = document.createElement('li');
+                    ul.appendChild(li);
+                    li.appendChild(renderContentListEntry(entry));
+                }
+
+                versionElement.appendChild(div);
+                root.appendChild(versionElement);
+            }
+
+            if (content.model && content.model.length > 0) {
+                const modelElement = document.createElement('details');
+                modelElement.classList.add('applicable-models');
+                modelElement.innerHTML = `<summary>Applicable models</summary>`;
+
+                const modelList = document.createElement('ul');
+                modelElement.appendChild(modelList);
+
+                for (const model of content.model) {
+                    const modelItem = document.createElement('li');
+                    modelItem.textContent = model;
+                    modelList.appendChild(modelItem);
+                }
+
+                root.appendChild(modelElement);
             }
         }
 

@@ -64,13 +64,13 @@
             title.classList.add('title');
             const link = document.createElement('a');
             link.href = "{{ base_url }}/content/?contentID=" + obj.contentID;
-            link.textContent = obj.title;
+            link.textContent = obj.title ?? obj.fileVersion;
             title.appendChild(link);
             div.appendChild(title);
 
             const pubDate = document.createElement('p');
             pubDate.classList.add('pub-date');
-            pubDate.textContent = `Posted on: ${obj.orgPubDate ?? obj.startDate}`;
+            pubDate.textContent = `Posted on: ${obj.orgPubDate ?? obj.startDate ?? obj.createDate}`;
 
             if (obj.fileVersion) {
                 pubDate.textContent += ` | Version ${obj.fileVersion}`;
