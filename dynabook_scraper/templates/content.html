@@ -78,8 +78,17 @@
                     fileSize = ` (${humanFileSize(content.fileSize)})`;
                 }
                 if (crawlResult.status_code === 200) {
+                    let via = "";
+                    if (crawlResult.mirror_url) {
+                        via = ` via <a href="${crawlResult.mirror_url}" target="_blank" rel="noopener" referrerpolicy="no-referrer">${crawlResult.mirror_hostname}</a>`;
+                    }
+                    let originalUrl = "";
+                    if (crawlResult.original_url) {
+                        originalUrl = ` The file was originally hosted <a href="${crawlResult.original_url}" target="_blank" rel="noopener" referrerpolicy="no-referrer">here</a>.`;
+                    }
+
                     container.classList.add('pico-background-zinc-550');
-                    descBox.innerHTML = `File <span class="pre">${filename}</span>${fileSize} has been mirrored and is available for download.`;
+                    descBox.innerHTML = `File <span class="pre">${filename}</span>${fileSize} has been mirrored${via} and is available for download.${originalUrl}`;
 
                     const downloadLink = document.createElement('a');
                     downloadLink.setAttribute('role', 'button');

@@ -101,6 +101,11 @@
                     const filename = contentFile.split('/').pop();
                     downloadBtn.textContent = 'Download';
                     downloadBtn.href = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
+
+                    if (obj.mirror_hostname) {
+                        dlDiv.setAttribute('data-placement', 'left');
+                        dlDiv.setAttribute('data-tooltip', `From ${obj.mirror_hostname}`);
+                    }
                 }
 
                 entry.appendChild(dlDiv);
