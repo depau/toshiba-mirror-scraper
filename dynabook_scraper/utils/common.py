@@ -51,7 +51,7 @@ async def _handle_ratelimit(e: Exception, iteration: int, headers: MultiMapping[
 def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
     async def wrapper(*args, **kwargs):
         exc = None
-        for i in range(10):
+        for i in range(7):  # 2**8 = 256 seconds ~= 4 minutes
             try:
                 return await fn(*args, **kwargs)
             except (
