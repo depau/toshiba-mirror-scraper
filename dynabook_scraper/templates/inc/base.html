@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@40,400,1,0&icon_names=light_mode"/>
 
     <title>{% block title %}Toshiba/Dynabook Drivers and Manuals Archive{% endblock %}</title>
 
@@ -176,6 +178,7 @@
     </ul>
     <ul>
         <li><a href="#">Source code</a></li>
+        <li><a href="#" onclick="toggleTheme()"><span class="material-symbols-outlined">light_mode</span></a></li>
     </ul>
 </nav>
 
@@ -184,14 +187,75 @@
 </main>
 
 <footer class="{% block footer_class %}container{% endblock %}">
-    {% block footer %}{% endblock %}
+    {% block footer %}
+        <p>
+            Created and hosted by <a href="https://depau.eu">Davide Depau</a>.
+        </p>
+
+        <p>
+            The content on this site was originally
+            hosted on the <a href="https://support.dynabook.com/drivers" target="_blank" rel="noopener"
+                             referrerpolicy="no-referrer">Dynabook support website</a> and is provided free of charge
+            for preservation purposes, with no affiliation with Dynabook and without any warranty, including but not
+            limited to availability, accuracy of content and lack of malware or other harmful code.
+        </p>
+
+        <p>
+            Some content has been obtained from <a href="https://timetravel.mementoweb.org/" target="_blank"
+                                                   rel="noopener" referrerpolicy="no-referrer">web archives</a> and may
+            not match the original content.
+        </p>
+    {% endblock %}
 </footer>
 
 <script>
-    document.body.setAttribute('data-theme', window.appearance);
+    function refreshTheme() {
+        const desiredTheme = getDesiredTheme();
+        const html = document.querySelector('html');
+
+        html.setAttribute('data-theme', desiredTheme);
+        document.body.setAttribute('data-theme', desiredTheme);
+    }
+
+    function getDesiredTheme() {
+        if (typeof window.localStorage !== "undefined") {
+            const override = window.localStorage.getItem('override-theme');
+            if (override) {
+                return window.localStorage.getItem('forced-theme') ?? window.appearance;
+            }
+        }
+
+        return window.appearance;
+    }
+
+    function toggleTheme() {
+        setOverrideTheme(!getOverrideTheme());
+    }
+
+    function getOverrideTheme() {
+        if (typeof window.localStorage !== "undefined") {
+            return window.localStorage.getItem('override-theme') === 'true';
+        }
+
+        return false;
+    }
+
+    function setOverrideTheme(override) {
+        if (typeof window.localStorage !== "undefined") {
+            window.localStorage.setItem('override-theme', override);
+            if (override) {
+                let newAppearance = window.appearance === 'dark' ? 'light' : 'dark';
+                window.localStorage.setItem('forced-theme', newAppearance);
+            } else {
+                window.localStorage.removeItem('forced-theme');
+            }
+        }
+        refreshTheme();
+    }
+
+    refreshTheme();
     window.addEventListener('appearance-changed', function (e) {
-        document.body.removeAttribute('data-theme');
-        document.body.setAttribute('data-theme', e.detail);
+        refreshTheme();
     });
 </script>
 
