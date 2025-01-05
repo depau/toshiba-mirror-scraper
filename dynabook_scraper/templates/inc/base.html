@@ -4,8 +4,7 @@
     <meta charset="UTF-8">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.colors.min.css">
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@40,400,1,0&icon_names=light_mode"/>
+    <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 
     <title>{% block title %}Toshiba/Dynabook Drivers and Manuals Archive{% endblock %}</title>
 
@@ -101,14 +100,14 @@
 
                 if (obj.status_code !== 200) {
                     div.classList.add('unavailable');
-                    downloadBtn.textContent = 'N/A';
+                    downloadBtn.innerHTML = '<span class="material-icons">report_gmailerrorred</span> N/A';
                     downloadBtn.setAttribute('disabled', '');
 
                     dlDiv.setAttribute('data-tooltip', `Got a ${obj.status_code} response at crawl time`);
                 } else {
                     const contentFile = obj.contentFile;
                     const filename = contentFile.split('/').pop();
-                    downloadBtn.textContent = 'Download';
+                    downloadBtn.innerHTML = `<span class="material-icons">file_download</span> Download`;
                     downloadBtn.href = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
 
                     if (obj.mirror_hostname) {
@@ -178,6 +177,15 @@
         .product-line {
             padding: 10px 0;
         }
+
+        .material-icons {
+            position: relative;
+            top: 5px;
+        }
+
+        a.download {
+            min-width: 165px;
+        }
     </style>
 
     {% block head %}{% endblock %}
@@ -190,7 +198,7 @@
     </ul>
     <ul>
         <li><a href="#">Source code</a></li>
-        <li><a href="#" onclick="toggleTheme()"><span class="material-symbols-outlined">light_mode</span></a></li>
+        <li><a href="#" onclick="toggleTheme()"><span class="material-icons">light_mode</span></a></li>
     </ul>
 </nav>
 
