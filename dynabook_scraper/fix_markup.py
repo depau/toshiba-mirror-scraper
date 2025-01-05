@@ -63,7 +63,11 @@ async def fix_content_markup(content_file_path: Path):
         async with aiofiles.open(content_file_path) as f:
             content = await json.aload(f)
 
-        cid = content["contentID"]
+        cid = content.get("contentID")
+        if not cid:
+            print(f"Content ID not found in {content_file_path}")
+            return
+
         if "markup_fixed" in content:
             return
 
