@@ -5,13 +5,12 @@
 {% endblock %}
 
 {% block content %}
-    {% include "inc/search_form.html" %}
-
-    <br>
-
-    <h1>Products</h1>
-
-    <div id="products"></div>
+    <article>
+        {% include "inc/search_form.html" %}
+        <br>
+        <h1>Products</h1>
+        <div id="products"></div>
+    </article>
 
     <script>
         loadProducts().then(async () => {
