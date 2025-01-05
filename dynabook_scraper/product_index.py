@@ -27,6 +27,8 @@ def filter_content(content: dict[str, Any]) -> dict[str, Any]:
         "mirror_url",
         "rescue_strategy",
         "url",
+        "tags",
+        "os",
     }
     return {k: v for k, v in content.items() if k in keep_keys}
 
@@ -88,6 +90,10 @@ async def gen_product_index(all_products, families, info, mid):
     if model_img_link.is_file():
         async with aiofiles.open(model_img_link) as f:
             product["model_img"] = f"assets{(await f.read()).strip()}"
+
+    # Load operating systems
+    async with aiofiles.open(products_work_dir / str(mid) / "operating_systems.json") as f:
+        product["os_list"] = await json.aload(f)
 
     # Load factory config
     factory_config = products_work_dir / str(mid) / "factory_config.json"

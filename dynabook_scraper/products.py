@@ -1,8 +1,8 @@
+from collections import defaultdict
 from pathlib import Path
 from urllib.parse import parse_qs
 
 import aiofiles
-import aiohttp
 import bs4
 from tqdm import tqdm
 
@@ -19,7 +19,7 @@ CONCURRENCY = 30
 
 
 # noinspection JSUnresolvedReference
-async def parse_product(session: aiohttp.ClientSession, mid: str):
+async def parse_product(mid: str):
     product_dir = products_work_dir / mid
     product_dir.mkdir(exist_ok=True)
 
@@ -30,6 +30,8 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
 
     async with aiofiles.open(product_dir / "operating_systems.json") as f:
         os_list = await json.aload(f)
+
+    os_map = {os_obj["osId"]: os_obj["osNameAndType"] for os_obj in os_list}
 
     # Find model image
     soup = bs4.BeautifulSoup(page, "html.parser")
@@ -77,27 +79,23 @@ async def parse_product(session: aiohttp.ClientSession, mid: str):
 
     # Find drivers
     driver_contents = {}
+    drivers = defaultdict(list)
 
-    def ingest_drivers(driver_contents_list):
-        if not driver_contents_list:
-            return
-        for driver in remove_null_fields(driver_contents_list):
-            content_id = str(driver["contentID"])
-            driver_contents[content_id] = driver
-            yield content_id
-
-    drivers = {
-        "Any": list(ingest_drivers(extract_json_var(page, "driversUpdatesJsonArr"))),
-    }
-
-    for os_obj in os_list:
-        os_id = os_obj["osId"]
-        os_name = os_obj["osNameAndType"]
-
-        async with aiofiles.open(product_html_dir / f"os_{os_id}.html") as f:
+    if os_map:
+        any_os = next(iter(os_map.keys()))
+        async with aiofiles.open(product_html_dir / f"os_{any_os}.html") as f:
             os_page = await f.read()
+            for driver in remove_null_fields(extract_json_var(os_page, "driversUpdatesJsonArr")):
+                content_id = str(driver["contentID"])
+                driver["tags"] = driver.get("tags", "").split(",")
+                driver["os"] = [tag for tag in driver["tags"] if tag in os_map]
+                driver_contents[content_id] = driver
 
-        drivers[os_name] = list(ingest_drivers(extract_json_var(os_page, "driversUpdatesJsonArr")))
+                if not driver["os"]:
+                    drivers["Any"].append(content_id)
+                else:
+                    for os_id in driver["os"]:
+                        drivers[os_map[os_id]].append(content_id)
 
     async with aiofiles.open(product_dir / "drivers.json", "wb") as f:
         await json.adump({"contents": driver_contents, "drivers": drivers}, f)
@@ -111,9 +109,12 @@ async def parse_products(products_list: Path = data_dir / "all_products_flat.jso
 
     # noinspection PyShadowingNames
     async def coro(mid):
-        async with aiohttp.ClientSession() as session:
-            await parse_product(session, mid)
+        try:
+            await parse_product(mid)
             progress.update()
+        except Exception as e:
+            print(f"Error parsing product {mid}: {e}")
+            raise
 
     await run_concurrently(CONCURRENCY, coro, all_products.keys())
 
