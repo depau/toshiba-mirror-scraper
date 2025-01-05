@@ -110,10 +110,17 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
 
 @http_retry
 async def download_file(
-    url: str, out_dir: Path, out_filename: str | None = None, session: aiohttp.ClientSession = None
+    url: str,
+    out_dir: Path,
+    out_filename: str | None = None,
+    skip_existing: bool = False,
+    session: aiohttp.ClientSession = None,
 ):
     out_dir.mkdir(exist_ok=True, parents=True)
     filename = out_filename or Path(url).name
+
+    if skip_existing and (out_dir / filename).is_file():
+        return
 
     session = session or aiohttp.ClientSession()
     async with session:
