@@ -54,10 +54,13 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
         for i in range(7):  # 2**8 = 256 seconds ~= 4 minutes
             try:
                 return await fn(*args, **kwargs)
+            except aiohttp.ClientPayloadError as e:
+                exc = e
+                # Fixed, non-exponential backoff
+                await asyncio.sleep(3)
             except (
                 aiohttp.ClientConnectorError,
                 aiohttp.ConnectionTimeoutError,
-                aiohttp.ClientPayloadError,
                 TimeoutError,
             ) as e:
                 exc = e
@@ -69,7 +72,7 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
                     await _handle_ratelimit(e, i, e.headers)
                 else:
                     raise
-            except duckduckgo_search.exceptions.RatelimitException as e:
+            except duckduckgo_search.exceptions.DuckDuckGoSearchException as e:
                 exc = e
                 await _handle_ratelimit(e, i)
         raise exc
