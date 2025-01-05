@@ -34,6 +34,10 @@ def cli_build_frontend():
     with open(data_dir / "content" / "index.html", "w") as f:
         f.write(render("content.html"))
 
+    (data_dir / "eula").mkdir(exist_ok=True)
+    with open(data_dir / "eula" / "index.html", "w") as f:
+        f.write(render("eula.html"))
+
 
 if __name__ == "__main__":
     cli_build_frontend()
