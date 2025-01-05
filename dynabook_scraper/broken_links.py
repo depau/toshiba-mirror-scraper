@@ -9,7 +9,7 @@ import aiohttp
 from tqdm import tqdm
 
 from dynabook_scraper.utils import json
-from dynabook_scraper.utils.common import download_file, write_result_file, run_concurrently
+from dynabook_scraper.utils.common import download_file, write_result_file, run_concurrently, http_retry
 from dynabook_scraper.utils.paths import content_dir, downloads_dir
 from dynabook_scraper.utils.uvloop import async_run
 
@@ -28,15 +28,16 @@ class FileRescuerStrategy(abc.ABC):
 
 @register_scavenger
 class MementoRescuer(FileRescuerStrategy):
+    @http_retry
     async def download(self, url: str, out_dir: Path) -> dict[str, Any]:
         async with aiohttp.ClientSession() as session:
             async with session.get(
                 f"https://timetravel.mementoweb.org/timegate/{url}", allow_redirects=False
             ) as response:
+                response.raise_for_status()
                 if response.status != 302:
                     tqdm.write(f"Content not available on timetravel.mementoweb.org: {url}")
                     raise aiohttp.ClientResponseError(response.request_info, response.history, status=response.status)
-                response.raise_for_status()
 
             archive_url = response.headers["Location"]
             hostname = urlparse(archive_url).hostname
@@ -51,7 +52,7 @@ class MementoRescuer(FileRescuerStrategy):
 
 
 async def find_broken_links_content():
-    for file in os.listdir(content_dir):
+    for file in tqdm(os.listdir(content_dir), desc="Discovering broken links", unit="file"):
         if not file.endswith("_crawl_result.json"):
             continue
         content_id = file.replace("_crawl_result.json", "")
@@ -89,7 +90,7 @@ async def scrape_broken_link(details):
         except aiohttp.ClientResponseError as e:
             last_exc = e
     else:
-        tqdm.write(f"Failed to rescue {url}: {last_exc}")
+        tqdm.write(f"Failed to rescue {url} [{cid}]: {last_exc}")
         await write_result_file(cid, url, last_exc.status, url, last_exc.request_info.url.host)
 
 
