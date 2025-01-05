@@ -2,12 +2,14 @@ import asyncio
 import re
 from pathlib import Path
 from typing import Callable, Awaitable, Iterable, Any, List
+from urllib.parse import urlparse
 
 import aiofiles
 import aiohttp
 from tqdm import tqdm
 
 from . import json
+from .paths import content_dir
 
 
 def extract_json_var(script: str, var_name: str):
@@ -83,3 +85,19 @@ def remove_null_fields[T](obj: T) -> T:
     elif isinstance(obj, dict):
         return {k: remove_null_fields(v) for k, v in obj.items() if v is not None}
     return obj
+
+
+async def write_result_file(cid: str, url: str, status_code: int, filename: str, mirror_url: str, **additional_info):
+    result = {
+        "contentID": cid,
+        "original_url": url,
+        "status_code": status_code,
+        "mirror_url": mirror_url,
+        "mirror_hostname": urlparse(mirror_url).hostname,
+        **additional_info,
+    }
+    if 200 <= status_code < 300:
+        result["url"] = f"content/{cid}/{filename}"
+
+    async with aiofiles.open(content_dir / f"{cid}_crawl_result.json", "w") as f:
+        await json.adump(result, f)

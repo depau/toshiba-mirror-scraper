@@ -4,14 +4,13 @@ import sys
 import traceback
 from pathlib import Path
 from typing import Any
-from urllib.parse import urlparse
 
 import aiofiles
 import aiohttp
 import bs4
 from tqdm import tqdm
 
-from dynabook_scraper.utils.common import run_concurrently, download_file
+from dynabook_scraper.utils.common import run_concurrently, download_file, write_result_file
 from .utils import json
 from .utils.paths import content_dir, downloads_dir
 from .utils.uvloop import async_run
@@ -25,38 +24,6 @@ def handle_error(cid: str, details: dict[str, Any], out_dir: Path):
     with open("errors.txt", "a") as f:
         print(f"Error downloading content [{cid}] {details.get('contentFile')}", file=f)
         traceback.print_exc(file=f)
-
-
-async def write_result_file(cid: str, url: str, status_code: int, filename: str, mirror_url: str):
-    result = {
-        "contentID": cid,
-        "original_url": url,
-        "status_code": status_code,
-        "mirror_url": mirror_url,
-        "mirror_hostname": urlparse(mirror_url).hostname,
-    }
-    if 200 <= status_code < 300:
-        result["url"] = f"content/{cid}/{filename}"
-
-    async with aiofiles.open(content_dir / f"{cid}_crawl_result.json", "w") as f:
-        await json.adump(result, f)
-
-
-async def download_from_memento(url: str, out_dir: Path) -> str:
-    async with aiohttp.ClientSession() as session:
-        async with session.get(f"https://timetravel.mementoweb.org/timegate/{url}", allow_redirects=False) as response:
-            if response.status != 302:
-                tqdm.write(f"Content not available on timetravel.mementoweb.org: {url}")
-                raise aiohttp.ClientResponseError(response.request_info, response.history, status=404)
-            response.raise_for_status()
-
-        archive_url = response.headers["Location"]
-        hostname = urlparse(archive_url).hostname
-
-        tqdm.write(f"Downloading from Memento {hostname}: {url}")
-        await download_file(archive_url, out_dir)
-
-        return archive_url
 
 
 async def download_content(details: dict[str, Any]):
@@ -79,15 +46,8 @@ async def download_content(details: dict[str, Any]):
             ):
                 return
 
-            try:
-                await download_file(url, out_dir)
-                await write_result_file(cid, url, 200, filename, url)
-            except aiohttp.ClientResponseError as e:
-                if e.status == 404:
-                    source = await download_from_memento(url, out_dir)
-                    await write_result_file(cid, url, 200, filename, source)
-                else:
-                    raise
+            await download_file(url, out_dir)
+            await write_result_file(cid, url, 200, filename, url)
 
         elif content_type == "scraper-swf":
             filename = "index.html"
