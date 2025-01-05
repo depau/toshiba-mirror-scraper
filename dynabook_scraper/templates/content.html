@@ -42,6 +42,7 @@
                 <div class="content-header">
                     <h3>${contentTypeMap[content.contentType] ?? "Content"}</h3>
                     <h1>${content.heading ?? content.title ?? content.contentFile.split('/').pop() ?? contentID}</h1>
+                    <p>View on <a href="https://support.dynabook.com/support/viewContentDetail?contentId=${contentID}" target="_blank" rel="noopener" referrerpolicy="no-referrer">Dynabook's website</a></p>
                 </div>
             `;
 
