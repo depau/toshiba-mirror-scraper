@@ -117,22 +117,26 @@ async def download_file(
 
     session = session or aiohttp.ClientSession()
     async with session:
-        async with session.get(url) as response:
-            response.raise_for_status()
-            size = int(response.headers.get("Content-Length", 0))
+        try:
+            async with session.get(url) as response:
+                response.raise_for_status()
+                size = int(response.headers.get("Content-Length", 0))
 
-            with tqdm(
-                total=size,
-                unit="B",
-                unit_scale=True,
-                unit_divisor=1024,
-                desc=f"Downloading {filename}",
-                leave=False,
-            ) as progress_bar:
-                async with aiofiles.open(out_dir / filename, "wb") as f:
-                    async for chunk in response.content.iter_chunked(1024):
-                        await f.write(chunk)
-                        progress_bar.update(len(chunk))
+                with tqdm(
+                    total=size,
+                    unit="B",
+                    unit_scale=True,
+                    unit_divisor=1024,
+                    desc=f"Downloading {filename}",
+                    leave=False,
+                ) as progress_bar:
+                    async with aiofiles.open(out_dir / filename, "wb") as f:
+                        async for chunk in response.content.iter_chunked(1024):
+                            await f.write(chunk)
+                            progress_bar.update(len(chunk))
+        except aiohttp.ClientPayloadError as e:
+            e.status = 999
+            e.request_info = response.request_info
 
 
 def remove_null_fields[T](obj: T) -> T:
