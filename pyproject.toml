@@ -7,8 +7,11 @@ requires-python = ">=3.10"
 dependencies = [
     "aiofiles>=24.1.0",
     "aiohttp>=3.11.11",
+    "asgiref>=3.8.1",
     "async-cache>=1.1.1",
     "beautifulsoup4>=4.12.3",
+    "duckduckgo-search>=7.2.0",
+    "internetarchive>=5.0.5",
     "jinja2>=3.1.5",
     "jq>=1.8.0",
     "orjson>=3.10.13; implementation_name == 'cpython'",

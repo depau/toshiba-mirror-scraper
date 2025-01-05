@@ -7,6 +7,8 @@ from urllib.parse import urlparse
 
 import aiofiles
 import aiohttp
+import duckduckgo_search.exceptions
+from multidict import MultiMapping
 from tqdm import tqdm
 
 from . import json
@@ -38,6 +40,14 @@ async def run_concurrently[T](
     return results
 
 
+async def _handle_ratelimit(e: Exception, iteration: int, headers: MultiMapping[str] | None = None):
+    tqdm.write(f"Rate limited: {e} - attempt: {iteration + 1}")
+    if headers and "Retry-After" in headers:
+        await asyncio.sleep(int(headers["Retry-After"]))
+    else:
+        await asyncio.sleep(2 ** (iteration + 1) + random.randint(0, 10000) / 1000)
+
+
 def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
     async def wrapper(*args, **kwargs):
         exc = None
@@ -50,19 +60,18 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
                 aiohttp.ClientPayloadError,
                 TimeoutError,
             ) as e:
-                tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
                 exc = e
+                tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
                 await asyncio.sleep(2**i)
             except aiohttp.ClientResponseError as e:
+                exc = e
                 if e.status == 429:
-                    tqdm.write(f"Rate limited: {e} - attempt: {i + 1}")
-                    exc = e
-                    if "Retry-After" in e.headers:
-                        await asyncio.sleep(int(e.headers["Retry-After"]))
-                    else:
-                        await asyncio.sleep(2 ** (i + 1) + random.randint(0, 10000) / 1000)
+                    await _handle_ratelimit(e, i, e.headers)
                 else:
-                    raise e
+                    raise
+            except duckduckgo_search.exceptions.RatelimitException as e:
+                exc = e
+                await _handle_ratelimit(e, i)
         raise exc
 
     return wrapper
