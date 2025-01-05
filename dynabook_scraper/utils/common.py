@@ -38,7 +38,7 @@ async def run_concurrently[T](
 def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
     async def wrapper(*args, **kwargs):
         exc = None
-        for i in range(5):
+        for i in range(10):
             try:
                 return await fn(*args, **kwargs)
             except (aiohttp.ClientConnectorError, aiohttp.ConnectionTimeoutError, TimeoutError) as e:
