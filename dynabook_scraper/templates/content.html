@@ -8,8 +8,23 @@
 
     <script>
         async function loadContent(contentID) {
+            const root = document.getElementById('content');
+
             const contentUrl = `{{ base_url }}/content/${contentID}.json`;
-            const response = await fetch(contentUrl);
+
+            let response = null;
+            try {
+                response = await fetch(contentUrl);
+            } catch (e) {
+                root.innerHTML = `Failed to load content: ${e}`;
+                return;
+            }
+
+            if (!response.ok) {
+                root.innerHTML = `Failed to load content: ${response.statusText}`;
+                return;
+            }
+
             const content = await response.json();
 
             let crawlResult = null;
@@ -37,7 +52,6 @@
                 "scraper-swf": "Adobe Flash content",
             }
 
-            const root = document.getElementById('content');
             root.innerHTML = `
                 <div class="content-header">
                     <h3>${contentTypeMap[content.contentType] ?? "Content"}</h3>

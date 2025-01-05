@@ -8,11 +8,24 @@
 
     <script>
         async function loadProduct(mid) {
+            const root = document.getElementById('product');
+
             const productUrl = `{{ base_url }}/products/${mid}.json`;
-            const response = await fetch(productUrl);
+
+            let response = null;
+            try {
+                response = await fetch(productUrl);
+            } catch (e) {
+                root.innerHTML = `Failed to load product: ${e}`;
+                return;
+            }
+            if (!response.ok) {
+                root.innerHTML = `Failed to load product: ${response.statusText}`;
+                return;
+            }
+
             const product = await response.json();
 
-            const root = document.getElementById('product');
             root.innerHTML = `
                 <div class="product-header">
                 <div>
