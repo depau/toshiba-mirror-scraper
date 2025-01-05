@@ -166,33 +166,45 @@ def gather_drivers(downloader: ContentDownloader):
     driver_jsons = products_work_dir.glob("*/drivers.json")
 
     for f in tqdm(list(driver_jsons), desc="Gathering drivers", unit="file"):
-        with open(f) as file:
-            j = json.load(file)
+        try:
+            with open(f) as file:
+                j = json.load(file)
 
-            for _, driver in j["contents"].items():
-                downloader.ingest(driver)
+                for _, driver in j["contents"].items():
+                    downloader.ingest(driver)
+        except Exception as e:
+            print(f"Error processing {f}: {e}")
+            raise
 
 
 def gather_knowledge_base(downloader: ContentDownloader):
     kb_jsons = products_work_dir.glob("*/knowledge_base.json")
 
     for f in tqdm(list(kb_jsons), desc="Gathering knowledge base", unit="file"):
-        with open(f) as file:
-            j = json.load(file)
+        try:
+            with open(f) as file:
+                j = json.load(file)
 
-            for kb in j:
-                downloader.ingest(kb)
+                for kb in j:
+                    downloader.ingest(kb)
+        except Exception as e:
+            print(f"Error processing {f}: {e}")
+            raise
 
 
 def gather_manuals_and_specs(downloader: ContentDownloader):
     manuals_jsons = products_work_dir.glob("*/manuals_and_specs.json")
 
     for f in tqdm(list(manuals_jsons), desc="Gathering manuals and specs", unit="file"):
-        with open(f) as file:
-            j = json.load(file)
+        try:
+            with open(f) as file:
+                j = json.load(file)
 
-            for manual in j:
-                downloader.ingest(manual)
+                for manual in j:
+                    downloader.ingest(manual)
+        except Exception as e:
+            print(f"Error processing {f}: {e}")
+            raise
 
 
 def gather_content_links(downloader: ContentDownloader):
