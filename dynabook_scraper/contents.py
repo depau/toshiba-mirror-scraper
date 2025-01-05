@@ -100,12 +100,15 @@ async def download_content(details: dict[str, Any]):
             handle_error(cid, details, out_dir)
     except Exception:
         handle_error(cid, details, out_dir)
+        os.remove(content_dir / f"{cid}_crawl_result.json")
 
 
 async def download_contents():
     details = []
     for file in tqdm(os.listdir(content_dir), desc="Discovering content to download", unit="file"):
         if not file.endswith(".json") or file.endswith("_crawl_result.json"):
+            continue
+        if (content_dir / f"{file}_crawl_result.json").is_file():
             continue
         async with aiofiles.open(content_dir / file) as f:
             j = await json.aload(f)
