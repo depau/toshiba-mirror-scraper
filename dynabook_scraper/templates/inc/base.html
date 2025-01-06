@@ -100,9 +100,10 @@
                 downloadBtn.setAttribute('role', 'button');
 
                 if (obj.status_code !== 200) {
-                    div.classList.add('unavailable');
+                    entry.classList.add('unavailable');
                     downloadBtn.innerHTML = '<span class="material-icons">report_gmailerrorred</span> N/A';
                     downloadBtn.setAttribute('disabled', '');
+                    downloadBtn.classList.add('secondary');
 
                     dlDiv.setAttribute('data-tooltip', `Got a ${obj.status_code} response at crawl time`);
                 } else {
