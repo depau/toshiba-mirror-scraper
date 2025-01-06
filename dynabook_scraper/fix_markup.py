@@ -55,6 +55,12 @@ async def fix_markup(content_id: str, markup: str) -> str:
             if "/content/" in src:
                 path = src.split("/content/", 1)[1]
                 src = f"https://content.us.dynabook.com/content/{path}"
+            elif "/images/support/" in src:
+                path = src.split("/images/support/", 1)[1]
+                src = f"https://support.dynabook.com/images/support/{path}"
+            elif "/images/ui2/" in src:
+                path = src.split("/images/ui2/", 1)[1]
+                src = f"https://support.dynabook.com/images/ui2/{path}"
             else:
                 warnings.warn(f"Unpatched image link: {src}")
                 continue
