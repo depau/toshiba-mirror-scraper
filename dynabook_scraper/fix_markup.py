@@ -39,17 +39,25 @@ async def fix_markup(content_id: str, markup: str) -> str:
     # Fix images
     for img in soup.find_all("img", src=True):
         src = img["src"]
+
+        if src.startswith("data:image/"):
+            continue
+
+        # Fix toshiba.com URLs
+        src = src.replace("https://support.toshiba.com/content/", "https://content.us.dynabook.com/content/")
+
+        # Fix known offline hosts
+        if "csd.toshiba.com" in src or "forums.toshiba.com" in src:
+            src = f"https://timetravel.mementoweb.org/timegate/{src}"
+
         # Fix relative paths
         if not src.startswith("http"):
             if "/content/" in src:
                 path = src.split("/content/", 1)[1]
                 src = f"https://content.us.dynabook.com/content/{path}"
-            elif not src.startswith("data:image/"):
+            else:
                 warnings.warn(f"Unpatched image link: {src}")
                 continue
-
-        # Fix toshiba.com URLs
-        src = src.replace("https://support.toshiba.com/content/", "https://content.us.dynabook.com/content/")
 
         fname = Path(src).name
         dest_dir = downloads_dir / str(content_id)
