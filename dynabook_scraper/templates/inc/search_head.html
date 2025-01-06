@@ -20,8 +20,7 @@
 
         _fuse = new Fuse(Object.values(_products), {
             keys: [
-                {name: 'mname', weight: 0.5},
-                {name: 'fname', weight: 0.3},
+                {name: 'fullname', weight: 0.8},
                 {name: 'pname', weight: 0.15},
                 {name: 'mid', weight: 0.05},
             ],

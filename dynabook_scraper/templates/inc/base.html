@@ -36,6 +36,11 @@
                 const response = await fetch(indexUrl);
                 _products = await response.json();
 
+                // This should make the search with fusejs more intuitive
+                for (const [mid, product] of Object.entries(_products)) {
+                    product.fullname = `${product.fname} ${product.mname}`;
+                }
+
                 const imagesUrl = '{{ base_url }}/images.json';
                 const imagesResponse = await fetch(imagesUrl);
                 _images = await imagesResponse.json();
