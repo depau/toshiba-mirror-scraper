@@ -10,7 +10,6 @@
 <script>
     const {autocomplete} = window['@algolia/autocomplete-js'];
 </script>
-<script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
 <script>
     var _fuse = null;
@@ -20,14 +19,12 @@
 
         _fuse = new Fuse(Object.values(_products), {
             keys: [
-                {name: 'fullname', weight: 0.8},
-                {name: 'pname', weight: 0.15},
-                {name: 'mid', weight: 0.05},
+                {name: 'fullname', weight: 0.9},
+                {name: 'mid', weight: 0.1},
             ],
-            includeScore: false,
-            includeAllMatches: true,
-            useExtendedSearch: true,
-            threshold: 0.3,
+            minMatchCharLength: 3,
+            threshold: 0.2,
+            useExtendedSearch: false,
         });
 
         return _fuse;
