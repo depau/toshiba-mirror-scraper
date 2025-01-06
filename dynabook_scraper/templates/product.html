@@ -201,7 +201,7 @@
                     ul.classList.add('content-list');
                     div.appendChild(ul);
 
-                    for (const contentID of drivers.sort((a, b) => contents[b].orgPubDate.localeCompare(contents[a].orgPubDate))) {
+                    for (const contentID of drivers.sort((a, b) => contentDate(contents[b]).localeCompare(contentDate(contents[a])))) {
                         const entry = contents[contentID];
                         if (entry == null) continue;
 
@@ -229,7 +229,7 @@
                 ul.classList.add('content-list');
                 div.appendChild(ul);
 
-                for (const entry of product.knowledge_base.sort((a, b) => b.orgPubDate.localeCompare(a.orgPubDate))) {
+                for (const entry of product.knowledge_base.sort((a, b) => contentDate(b).localeCompare(contentDate(a)))) {
                     const li = document.createElement('li');
                     ul.appendChild(li);
                     li.appendChild(renderContentListEntry(entry));
@@ -251,7 +251,7 @@
                 ul.classList.add('content-list');
                 div.appendChild(ul);
 
-                for (const entry of product.manuals_and_specs.sort((a, b) => b.orgPubDate.localeCompare(a.orgPubDate))) {
+                for (const entry of product.manuals_and_specs.sort((a, b) => contentDate(b).localeCompare(contentDate(a)))) {
                     const li = document.createElement('li');
                     ul.appendChild(li);
                     li.appendChild(renderContentListEntry(entry));
@@ -302,7 +302,7 @@
                 const filename = contentFile.split('/').pop();
                 const url = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
 
-                const dateStr = obj.orgPubDate ?? obj.startDate ?? obj.createDate;
+                const dateStr = contentDate(obj);
                 const date = dateStr ? new Date(dateStr) : new Date();
 
                 let response = null;

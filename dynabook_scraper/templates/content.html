@@ -65,7 +65,7 @@
             `;
 
             const header = root.querySelector('.content-header');
-            const date = content.orgPubDate ?? content.startDate ?? content.pubDate;
+            const date = contentDate(content);
             if (date) {
                 const dateElement = document.createElement('p');
                 dateElement.classList.add('date');

@@ -132,6 +132,10 @@
             return true;
         }
 
+        function contentDate(content) {
+            return content.orgPubDate ?? content.startDate ?? content.pubDate;
+        }
+
         function humanFileSize(size) {
             if (typeof size !== 'bigint' && typeof size !== 'number') {
                 throw new TypeError('Size must be a number or a BigInt');
@@ -174,7 +178,7 @@
 
             const pubDate = document.createElement('p');
             pubDate.classList.add('pub-date');
-            pubDate.textContent = `Posted on: ${obj.orgPubDate ?? obj.startDate ?? obj.createDate}`;
+            pubDate.textContent = `Posted on: ${contentDate(obj)}`;
 
             if (obj.fileVersion) {
                 pubDate.textContent += ` | Version ${obj.fileVersion}`;
