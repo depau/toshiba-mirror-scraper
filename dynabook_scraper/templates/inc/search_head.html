@@ -15,7 +15,7 @@
     async function search(what, query) {
         if (query === '') return;
         const fuse = await getFuse(what);
-        return fuse.search(query);
+        return fuse.search(query).splice(0, 10);
     }
 
     function highlightSearchMatches(string, key, fuseMatches, html) {
@@ -64,8 +64,8 @@
         const fullname = highlightSearchMatches(item.item.na, 'na', item.matches, html);
 
         const productLine = item.item.ty === 'p' ?
-            `Product: ${item.item.pl}` :
-            `Content: ${contentTypeMap[item.item.ct]}`;
+            `${item.item.pl}` :
+            `${contentTypeMap[item.item.ct]}`;
 
         return html`
             <div class="search-result">
@@ -93,10 +93,19 @@
                         getItems({query}) {
                             return search("products", query);
                         },
+                        getItemUrl({item}) {
+                            return `{{ base_url }}/product/?mid=${item.item.id}`;
+                        },
                         onSelect({item}) {
                             document.location.href = `{{ base_url }}/product/?mid=${item.item.id}`;
                         },
                         templates: {
+                            header({html}) {
+                                return html`<div class="search-source-header">Products</div>`;
+                            },
+                            footer({html}) {
+                                return html`<div class="search-source-footer"></div>`;
+                            },
                             item: renderSearchResult,
                             noResults,
                         }
@@ -106,10 +115,19 @@
                         getItems({query}) {
                             return search("content", query);
                         },
+                        getItemUrl({item}) {
+                            return `{{ base_url }}/content/?contentID=${item.item.id}`;
+                        },
                         onSelect({item}) {
                             document.location.href = `{{ base_url }}/content/?contentID=${item.item.id}`;
                         },
                         templates: {
+                            header({html}) {
+                                return html`<div class="search-source-header">Content</div>`;
+                            },
+                            footer({html}) {
+                                return html`<div class="search-source-footer"></div>`;
+                            },
                             item: renderSearchResult,
                             noResults,
                         }
