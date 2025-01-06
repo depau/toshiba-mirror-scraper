@@ -6,7 +6,11 @@ the [Dynabook support](https://support.dynabook.com/) website, as well as its fr
 The mirror should be online [here](https://toshiba-mirror.depau.gay)
 
 On Dynabook's website, many drivers are missing. This mirror brings the vast majority of them back by finding them on
-the [Internet Archive](https://archive.org) and the [Wayback Machine](https://web.archive.org).
+the [Internet Archive](https://archive.org) and the [Wayback Machine](https://web.archive.org). Out of ~15k drivers,
+only less than 2k are missing.
+
+If you have copies of drivers that are missing, please upload them to the Internet Archive and let me know so I can
+add them to the mirror.
 
 This website also allows you to bulk-download all drivers.
 
