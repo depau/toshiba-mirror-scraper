@@ -70,6 +70,10 @@ You're probably better off downloading my own mirror and hosting it yourself ins
 If you'd like to do that, contact me. Or don't, it should be pretty easy to figure out, the directory listings are
 enabled on the web server.
 
+The full mirror is about 391GB in size:
+
+![image](https://github.com/user-attachments/assets/70ac7177-d851-4263-959f-af0c2dff2ad5)
+
 ## License
 
 The software (scraper and frontend) is licensed under the MIT License.
