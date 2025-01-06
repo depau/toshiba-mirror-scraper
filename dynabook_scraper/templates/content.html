@@ -16,16 +16,34 @@
             try {
                 response = await fetch(contentUrl);
             } catch (e) {
-                root.innerHTML = `Failed to load content: ${e}`;
+                root.innerHTML = `
+                <article class="pico-background-red-600">
+                    <h3>Failed to load content</h3>
+                    <p>${e}</p>
+                </article>`;
                 return;
             }
 
             if (!response.ok) {
-                root.innerHTML = `Failed to load content: ${response.statusText}`;
+                root.innerHTML = `
+                <article class="pico-background-red-600">
+                    <h3>Failed to load content</h3>
+                    <p>${response.statusText}</p>
+                </article>`;
                 return;
             }
 
             const content = await response.json();
+
+            if (!Object.hasOwn(content, "contentID") && !Object.hasOwn(content, "contentType")) {
+                root.innerHTML = `
+                    <article class="pico-background-red-600">
+                        <h3>Document not available.</h3>
+                        <p>You can try to see if it's available on <a href="//support.dynabook.com/support/viewContentDetail?contentId=${contentID}" target="_blank" rel="noopener" referrerpolicy="no-referrer">Dynabook's website</a></p>
+                    </article>`;
+                return;
+
+            }
 
             let crawlResult = null;
             try {
@@ -33,7 +51,7 @@
                 const response = await fetch(crawlResultUrl);
                 crawlResult = await response.json();
             } catch (e) {
-                console.error(e);
+                console.debug(e);
             }
 
             const contentTypeMap = {
