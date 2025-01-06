@@ -12,7 +12,7 @@ import bs4
 from tqdm import tqdm
 
 from dynabook_scraper.utils.common import run_concurrently, remove_null_fields, http_retry
-from .fix_markup import toshiba_support_re, dynabook_support_re
+from .fix_markup import toshiba_support_re, dynabook_support_re, fix_content_markup
 from .utils import json
 from .utils.paths import products_work_dir, content_dir
 from .utils.uvloop import async_run
@@ -141,6 +141,8 @@ class ContentDownloader:
         except aiohttp.client_exceptions.ContentTypeError:
             tqdm.write(f"Warning: Failed to fetch content details for {content} due to invalid content type")
             return
+
+        details = await fix_content_markup(details)
 
         async with aiofiles.open(content_dir / f"{content.contentID}.json", "wb") as f:
             await json.adump(details, f)

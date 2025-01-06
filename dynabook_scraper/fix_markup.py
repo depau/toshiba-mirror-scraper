@@ -1,23 +1,23 @@
-import os
 import re
-import sys
+import re
 import warnings
 from pathlib import Path
+from typing import Any
 
-import aiofiles
 import bs4
 from tqdm import tqdm
 
-from dynabook_scraper.utils import json
-from dynabook_scraper.utils.common import run_concurrently, download_file
-from dynabook_scraper.utils.paths import content_dir, downloads_dir
-from dynabook_scraper.utils.uvloop import async_run
+from dynabook_scraper.utils.common import download_file
+from dynabook_scraper.utils.paths import downloads_dir
 
 toshiba_support_re = re.compile(
     r"(?:https?:)?(?://)?www\.support\.toshiba\.com/sscontent\?contentId=(\d+)",
 )
 dynabook_support_re = re.compile(
     r"(?:https?:)?(?://)?support\.(?:dynabook|toshiba)\.com/support/viewContentDetail\?contentId=(\d+).*?",
+)
+static_content_re = re.compile(
+    r"(?:https?:)?(?://)?support\.(?:dynabook|toshiba)\.com/support/staticContentDetail\?contentId=(\d+).*?",
 )
 
 
@@ -26,7 +26,11 @@ async def fix_markup(content_id: str, markup: str) -> str:
 
     # Fix links
     for a in soup.find_all("a", href=True):
-        if match := toshiba_support_re.match(a["href"]) or dynabook_support_re.match(a["href"]):
+        if (
+            match := toshiba_support_re.match(a["href"])
+            or dynabook_support_re.match(a["href"])
+            or static_content_re.match(a["href"])
+        ):
             a["href"] = f"javascript:openSubDoc('{match.group(1)}', 'DL')"
         elif a["href"].startswith("javascript:") and not ("openSubDoc" in a["href"] or "printMe" in a["href"]):
             warnings.warn(f"Unpatched javascript link: {a['href']}")
@@ -58,55 +62,20 @@ async def fix_markup(content_id: str, markup: str) -> str:
     return str(soup)
 
 
-async def fix_content_markup(content_file_path: Path):
-    try:
-        async with aiofiles.open(content_file_path) as f:
-            try:
-                content = await json.aload(f)
-            except json.JSONDecodeError as e:
-                print(f"Error decoding JSON for {content_file_path}: {e}")
-                return
+async def fix_content_markup(content: dict[str, Any]) -> dict[str, Any]:
+    cid = content.get("contentID")
+    if not cid:
+        tqdm.write(f"Content ID not found in content: {content}")
+        return content
 
-        cid = content.get("contentID")
-        if not cid:
-            print(f"Content ID not found in {content_file_path}")
-            return
+    if "markup_fixed" in content:
+        return content
 
-        if "markup_fixed" in content:
-            return
+    if "packageInstruction" in content:
+        content["packageInstruction"] = await fix_markup(cid, content["packageInstruction"])
+    for section in content.get("contentDetail", []):
+        if "content" in section:
+            section["content"] = await fix_markup(cid, section["content"])
 
-        if "packageInstruction" in content:
-            content["packageInstruction"] = await fix_markup(cid, content["packageInstruction"])
-        for section in content.get("contentDetail", []):
-            if "content" in section:
-                section["content"] = await fix_markup(cid, section["content"])
-
-        content["markup_fixed"] = True
-
-        async with aiofiles.open(content_file_path, "w") as f:
-            await json.adump(content, f)
-    except Exception as e:
-        print(f"Error fixing markup for {content_file_path}: {e}")
-        raise
-
-
-async def fix_contents_markup():
-    files = [i for i in os.listdir(content_dir) if i.endswith(".json") and not i.endswith("_crawl_result.json")]
-    progress = tqdm(total=len(files), desc="Fixing content markup", unit="file")
-
-    async def coro(content_file):
-        content_file_path = content_dir / content_file
-        await fix_content_markup(content_file_path)
-        progress.update()
-
-    await run_concurrently(20, coro, files)
-
-
-def cli_fix_contents_markup():
-    async_run(fix_contents_markup())
-
-
-def cli_fix_content_markup():
-    content_id = sys.argv[1]
-    content_file_path = content_dir / f"{content_id}.json"
-    async_run(fix_content_markup(content_file_path))
+    content["markup_fixed"] = True
+    return content
