@@ -115,6 +115,7 @@ async def download_file(
     out_filename: str | None = None,
     skip_existing: bool = False,
     session: aiohttp.ClientSession = None,
+    size: int = 0,
 ):
     out_dir.mkdir(exist_ok=True, parents=True)
     filename = out_filename or Path(url).name
@@ -127,14 +128,14 @@ async def download_file(
         try:
             async with session.get(url) as response:
                 response.raise_for_status()
-                size = int(response.headers.get("Content-Length", 0))
+                size = int(response.headers.get("Content-Length", size))
 
                 with tqdm(
                     total=size,
                     unit="B",
                     unit_scale=True,
                     unit_divisor=1024,
-                    desc=f"Downloading {filename}",
+                    desc=f"Downloading {filename[-30:]}",
                     leave=False,
                 ) as progress_bar:
                     async with aiofiles.open(out_dir / filename, "wb") as f:
