@@ -103,6 +103,8 @@
                     const accordion2 = document.createElement('details');
                     const summary2 = document.createElement('summary');
                     summary2.textContent = os;
+                    if (os === "Any")
+                        summary2.textContent = "All operating systems";
                     accordion2.appendChild(summary2);
 
                     const div = document.createElement('div');
