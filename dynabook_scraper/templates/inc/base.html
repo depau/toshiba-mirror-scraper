@@ -135,7 +135,7 @@
         }
 
         function goLink(url) {
-            window.open(`https://support.dynabook.com/support/${url}`, '_blank', 'noopener,noreferrer');
+            window.open(`//support.dynabook.com/support/${url}`, '_blank', 'noopener,noreferrer');
         }
     </script>
 
@@ -208,6 +208,7 @@
     </ul>
     <ul>
         <li><a href="#">Source code</a></li>
+        <li id="https-link"><a href="#" onclick="useHttps()">Use HTTPS</a></li>
         <li><a href="#" onclick="toggleTheme()"><span class="material-icons"
                                                       id="night-mode-toggle">light_mode</span></a></li>
     </ul>
@@ -235,14 +236,14 @@
 
         <p>
             The content on this site was originally
-            hosted on the <a href="https://support.dynabook.com/drivers" target="_blank" rel="noopener"
+            hosted on the <a href="//support.dynabook.com/drivers" target="_blank" rel="noopener"
                              referrerpolicy="no-referrer">Dynabook support website</a> and is provided free of charge
             for preservation purposes, with no affiliation with Dynabook and without any warranty, including but not
             limited to availability, accuracy of content and lack of malware or other harmful code.
         </p>
 
         <p>
-            Some content has been obtained from <a href="https://timetravel.mementoweb.org/" target="_blank"
+            Some content has been obtained from <a href="//timetravel.mementoweb.org/" target="_blank"
                                                    rel="noopener" referrerpolicy="no-referrer">web archives</a> and may
             not match the original content.
         </p>
@@ -301,6 +302,17 @@
     window.addEventListener('appearance-changed', function (e) {
         refreshTheme();
     });
+
+    function useHttps() {
+        let url = new URL(window.location.href);
+        url.protocol = 'https';
+        url.port = '443';
+        window.location.href = url.href;
+    }
+
+    if (window.location.protocol === 'https:') {
+        document.getElementById('https-link').style.display = 'none';
+    }
 </script>
 
 </body>
