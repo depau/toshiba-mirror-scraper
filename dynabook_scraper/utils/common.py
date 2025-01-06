@@ -68,7 +68,7 @@ def resume_network():
 def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
     async def wrapper(*args, **kwargs):
         exc = None
-        for i in range(10):
+        for i in range(8):
             # Pause network if requested
             if _network_pause_event:
                 await _network_pause_event.wait()
