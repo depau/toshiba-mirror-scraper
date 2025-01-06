@@ -1,5 +1,4 @@
 import asyncio
-import os
 import random
 import re
 from pathlib import Path
@@ -14,7 +13,6 @@ from tqdm import tqdm
 
 from . import json
 from .paths import content_dir
-from .router import reboot_router
 
 
 def extract_json_var(script: str, var_name: str):
@@ -50,29 +48,10 @@ async def _handle_ratelimit(e: Exception, iteration: int, headers: MultiMapping[
         await asyncio.sleep(2 ** (iteration + 1) + random.randint(0, 10000) / 1000)
 
 
-_network_pause_event: asyncio.Event | None = None
-
-
-def pause_network():
-    global _network_pause_event
-    _network_pause_event = asyncio.Event()
-
-
-def resume_network():
-    global _network_pause_event
-    if _network_pause_event:
-        _network_pause_event.set()
-        _network_pause_event = None
-
-
 def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
     async def wrapper(*args, **kwargs):
         exc = None
         for i in range(8):
-            # Pause network if requested
-            if _network_pause_event:
-                await _network_pause_event.wait()
-
             try:
                 return await fn(*args, **kwargs)
             except (
@@ -92,16 +71,6 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
             except duckduckgo_search.exceptions.DuckDuckGoSearchException as e:
                 exc = e
                 await _handle_ratelimit(e, i)
-
-                # Tell DDG to go F itself and keep searching
-                if i > 3 and not _network_pause_event:
-                    tqdm.write(f"DDG is being a pain, rebooting router... {os.environ.get('ROUTER_HOST')}")
-                    if os.environ.get("ROUTER_HOST"):
-                        try:
-                            pause_network()
-                            await reboot_router()
-                        finally:
-                            resume_network()
 
         raise exc
 
