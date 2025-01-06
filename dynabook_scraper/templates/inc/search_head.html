@@ -25,6 +25,7 @@
             minMatchCharLength: 3,
             threshold: 0.2,
             useExtendedSearch: false,
+            includeMatches: true,
         });
 
         return _fuse;
@@ -33,6 +34,48 @@
     async function search(query) {
         if (query === '') return;
         return _fuse.search(query);
+    }
+
+    function highlightSearchMatches(string, key, fuseMatches, html) {
+        const fullnameMatch = fuseMatches.find(m => m.key === key);
+        if (!fullnameMatch) {
+            return string;
+        }
+
+        const sortedIndices = [...fullnameMatch.indices].sort((a, b) => a[0] - b[0]);
+
+        const mergedIndices = [];
+        let current = sortedIndices[0];
+        for (let i = 1; i < sortedIndices.length; i++) {
+            const [start, end] = sortedIndices[i];
+            if (start <= current[1] + 1) {
+                // Overlaps or is contiguous, so we merge
+                current[1] = Math.max(current[1], end);
+            } else {
+                // No overlap – push the previous range and start a new one
+                mergedIndices.push(current);
+                current = [start, end];
+            }
+        }
+        mergedIndices.push(current);
+
+        let result = [];
+        let lastIndex = 0;
+        for (const [start, end] of mergedIndices) {
+            // Non‐matched segment:
+            if (start > lastIndex) {
+                result.push(string.slice(lastIndex, start));
+            }
+            // Matched segment:
+            result.push(html`<span class="match">${string.slice(start, end + 1)}</span>`);
+            lastIndex = end + 1;
+        }
+        // Append any trailing non‐matched text:
+        if (lastIndex < string.length) {
+            result.push(string.slice(lastIndex));
+        }
+
+        return result;
     }
 
     loadIndex().then(() => {
@@ -50,10 +93,12 @@
                     },
                     templates: {
                         item({item, html}) {
+                            const fullname = highlightSearchMatches(item.item.fullname, 'fullname', item.matches, html);
+
                             return html`
                                 <div class="search-result">
                                     <div class="info">
-                                        <div class="name">${item.item.fname} ${item.item.mname}</div>
+                                        <div class="name">${fullname}</div>
                                         <div class="product-line">${item.item.pname}</div>
                                     </div>
                                 </div>
