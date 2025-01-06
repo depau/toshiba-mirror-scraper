@@ -12,7 +12,7 @@ import bs4
 from tqdm import tqdm
 
 from dynabook_scraper.utils.common import run_concurrently, remove_null_fields, http_retry
-from .fix_markup import toshiba_support_re, dynabook_support_re, fix_content_markup
+from .fix_markup import toshiba_support_re, dynabook_support_re, fix_content_markup, static_content_re
 from .utils import json
 from .utils.paths import products_work_dir, content_dir
 from .utils.uvloop import async_run
@@ -221,6 +221,7 @@ def gather_content_links(downloader: ContentDownloader):
             matches = [
                 toshiba_support_re.findall(raw),
                 dynabook_support_re.findall(raw),
+                static_content_re.findall(raw),
                 js_link_re.findall(raw),
             ]
 
