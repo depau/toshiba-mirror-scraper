@@ -158,11 +158,14 @@
             if (Object.hasOwn(product, "drivers") && !isEmpty(product.drivers.contents)) {
                 console.log("has drivers");
 
-
+                const dlP = document.createElement('p');
                 const downloadAll = document.createElement('a');
-                downloadAll.textContent = 'Download all drivers';
+                downloadAll.id = 'download-all-drivers';
+                downloadAll.setAttribute('role', 'button');
+                downloadAll.innerHTML = `<span class="material-icons">file_download</span> Download all drivers`;
                 downloadAll.href = `javascript:openDownloadDialog()`;
-                content.appendChild(downloadAll);
+                dlP.appendChild(downloadAll);
+                content.appendChild(dlP);
 
                 const accordion = document.createElement('details');
                 accordion.setAttribute('open', '');
