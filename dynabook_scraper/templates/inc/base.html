@@ -12,16 +12,32 @@
     <script src="https://cdn.jsdelivr.net/npm/fuse.js@7.0.0"></script>
 
     <script>
-        var _products = null;
-        var _images = null;
-        var _productsPromise = null;
-
         const archiveNameMap = {
             "archive.org": "the Internet Archive",
             "web.archive.org": "the Wayback Machine",
             "www.archive-it.org": "Archive-It",
             "content.us.dynabook.com": "Dynabook",
         };
+
+        const contentTypeMap = {
+            TP: "Tech pack",
+            PC: "Parts catalog",
+            DL: "Download",
+            UG: "User guide",
+            IA: "Issue alert",
+            SB: "Support bulletin",
+            PT: "Product tour",
+            DS: "Detailed specs",
+            RG: "Resource guide",
+            MM: "Maintenance manual",
+            QSG: "Quick start guide",
+            "scraper-static-content": "Static content",
+            "scraper-swf": "Adobe Flash content",
+        }
+
+        var _products = null;
+        var _images = null;
+        var _productsPromise = null;
 
         async function loadProducts() {
             if (_products !== null && _images !== null) {
@@ -33,14 +49,9 @@
             }
 
             _productsPromise = (async () => {
-                const indexUrl = '{{ base_url }}/all_products_flat.json';
-                const response = await fetch(indexUrl);
+                const productsUrl = '{{ base_url }}/all_products_flat.json';
+                const response = await fetch(productsUrl);
                 _products = await response.json();
-
-                // This should make the search with fusejs more intuitive
-                for (const [mid, product] of Object.entries(_products)) {
-                    product.fullname = `${product.fname} ${product.mname}`;
-                }
 
                 const imagesUrl = '{{ base_url }}/images.json';
                 const imagesResponse = await fetch(imagesUrl);
@@ -49,6 +60,66 @@
 
             await _productsPromise;
             _productsPromise = null;
+        }
+
+        const _indices = {};
+
+        async function loadSearchIndex(what) {
+            const i = what;
+            if (_indices[i] === undefined) {
+                _indices[i] = {
+                    dataset: null,
+                    index: null,
+                    promise: null,
+                }
+            }
+
+            if (_indices[i].index !== null && _indices[i].dataset !== null) {
+                return _indices[i];
+            }
+
+            if (_indices[i].promise != null) {
+                return _indices[i].promise;
+            }
+
+            _indices[i].promise = (async () => {
+                const datasetUrl = `{{ base_url }}/${i}_dataset.json`;
+                const response = await fetch(datasetUrl);
+                _indices[i].dataset = await response.json();
+
+                const indexUrl = `{{ base_url }}/${i}_index.json`;
+                const indexResponse = await fetch(indexUrl);
+                _indices[i].index = Fuse.parseIndex(await indexResponse.json());
+            })();
+
+            await _indices[i].promise;
+            _indices[i].promise = null;
+            return _indices[i];
+        }
+
+        const _fuses = {};
+
+        async function getFuse(what, options) {
+            if (_fuses[what] !== undefined) {
+                return _fuses[what];
+            }
+
+            if (options === undefined) {
+                options = {};
+            }
+
+            const {index, dataset} = await loadSearchIndex(what);
+
+            _fuses[what] = new Fuse(dataset, {
+                keys: ['na'],
+                minMatchCharLength: 3,
+                threshold: 0.2,
+                useExtendedSearch: false,
+                includeMatches: true,
+                ...options
+            }, index);
+
+            return _fuses[what];
         }
 
         function isEmpty(obj) {
@@ -328,6 +399,8 @@
         document.getElementById('https-link').style.display = 'none';
     }
 </script>
+
+{% block footer_scripts %}{% endblock %}
 
 </body>
 </html>

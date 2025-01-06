@@ -54,22 +54,6 @@
                 console.debug(e);
             }
 
-            const contentTypeMap = {
-                TP: "Tech pack",
-                PC: "Parts catalog",
-                DL: "Download",
-                UG: "User guide",
-                IA: "Issue alert",
-                SB: "Support bulletin",
-                PT: "Product tour",
-                DS: "Detailed specs",
-                RG: "Resource guide",
-                MM: "Maintenance manual",
-                QSG: "Quick start guide",
-                "scraper-static-content": "Static content",
-                "scraper-swf": "Adobe Flash content",
-            }
-
             const title = content.heading ?? content.title ?? content.contentFile.split('/').pop() ?? contentID;
             document.title = `${title} - Toshiba/Dynabook Drivers and Manuals Archive`;
             root.innerHTML = `
@@ -185,9 +169,6 @@
             }
 
             if (content.model && content.model.length > 0) {
-                // Load products in order to get links to applicable models
-                loadProducts().then(linkApplicableModels);
-
                 const modelElement = document.createElement('details');
                 modelElement.classList.add('applicable-models');
                 modelElement.innerHTML = `<summary>Applicable models</summary>`;
@@ -203,29 +184,24 @@
                 }
 
                 root.appendChild(modelElement);
+
+                linkApplicableModels().then();
             }
         }
 
-        async function refreshUI(){
+        async function refreshUI() {
             await new Promise(r => setTimeout(r, 0));
         }
 
         async function linkApplicableModels() {
-            const fuse = new Fuse(Object.values(_products), {
-                keys: [
-                    {name: 'fullname', weight: 1},
-                ],
-                includeScore: false,
-                includeAllMatches: true,
-                useExtendedSearch: true,
-                threshold: 0.3,
-            });
+            const fuse = await getFuse("products", {includeMatches: false});
+
             const models = document.querySelectorAll('.applicable-model-entry');
             for (const model of models) {
                 const result = fuse.search(model.textContent);
                 if (result.length > 0) {
                     const product = result[0].item;
-                    model.innerHTML = `<a href="{{ base_url }}/product/?mid=${product.mid}">${model.textContent}</a>`;
+                    model.innerHTML = `<a href="{{ base_url }}/product/?mid=${product.id}">${model.textContent}</a>`;
                 }
                 await refreshUI();
             }

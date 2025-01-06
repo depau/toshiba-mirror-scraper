@@ -12,28 +12,10 @@
 </script>
 
 <script>
-    var _fuse = null;
-
-    async function loadIndex() {
-        await loadProducts();
-
-        _fuse = new Fuse(Object.values(_products), {
-            keys: [
-                {name: 'fullname', weight: 0.9},
-                {name: 'mid', weight: 0.1},
-            ],
-            minMatchCharLength: 3,
-            threshold: 0.2,
-            useExtendedSearch: false,
-            includeMatches: true,
-        });
-
-        return _fuse;
-    }
-
-    async function search(query) {
+    async function search(what, query) {
         if (query === '') return;
-        return _fuse.search(query);
+        const fuse = await getFuse(what);
+        return fuse.search(query);
     }
 
     function highlightSearchMatches(string, key, fuseMatches, html) {
@@ -78,40 +60,63 @@
         return result;
     }
 
-    loadIndex().then(() => {
+    function renderSearchResult({item, html}) {
+        const fullname = highlightSearchMatches(item.item.na, 'na', item.matches, html);
+
+        const productLine = item.item.ty === 'p' ?
+            `Product: ${item.item.pl}` :
+            `Content: ${contentTypeMap[item.item.ct]}`;
+
+        return html`
+            <div class="search-result">
+                <div class="info">
+                    <div class="name">${fullname}</div>
+                    <div class="product-line">${productLine}</div>
+                </div>
+            </div>
+        `;
+    }
+
+    function noResults({html}) {
+        return html`
+            <div>No results found</div>`;
+    }
+
+    setTimeout(() => {
         autocomplete({
             container: '#autocomplete',
-            placeholder: 'Search for a product...',
+            placeholder: 'Search for products and content...',
             getSources() {
-                return [{
-                    sourceId: 'products',
-                    getItems({query}) {
-                        return search(query);
-                    },
-                    onSelect({item}) {
-                        document.location.href = `{{ base_url }}/product/?mid=${item.item.mid}`;
-                    },
-                    templates: {
-                        item({item, html}) {
-                            const fullname = highlightSearchMatches(item.item.fullname, 'fullname', item.matches, html);
-
-                            return html`
-                                <div class="search-result">
-                                    <div class="info">
-                                        <div class="name">${fullname}</div>
-                                        <div class="product-line">${item.item.pname}</div>
-                                    </div>
-                                </div>
-                            `;
+                return [
+                    {
+                        sourceId: 'products',
+                        getItems({query}) {
+                            return search("products", query);
                         },
-                        noResults({html}) {
-                            return html`
-                                <div>No results found</div>`;
+                        onSelect({item}) {
+                            document.location.href = `{{ base_url }}/product/?mid=${item.item.id}`;
+                        },
+                        templates: {
+                            item: renderSearchResult,
+                            noResults,
+                        }
+                    },
+                    {
+                        sourceId: 'content',
+                        getItems({query}) {
+                            return search("content", query);
+                        },
+                        onSelect({item}) {
+                            document.location.href = `{{ base_url }}/content/?contentID=${item.item.id}`;
+                        },
+                        templates: {
+                            item: renderSearchResult,
+                            noResults,
                         }
                     }
-                }]
+                ]
             }
         });
-    });
+    }, 0);
 
 </script>

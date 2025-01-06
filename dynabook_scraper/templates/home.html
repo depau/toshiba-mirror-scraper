@@ -27,6 +27,9 @@
         <h1>Products</h1>
         <div id="products"></div>
     </article>
+{% endblock %}
+
+{% block footer_scripts %}
 
     <script>
         loadProducts().then(async () => {
@@ -72,9 +75,9 @@
 
                 document.getElementById('products').appendChild(productLineElement);
             }
-
-
         });
-    </script>
 
+        loadSearchIndex("products");
+        loadSearchIndex("content");
+    </script>
 {% endblock %}
