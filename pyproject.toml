@@ -43,6 +43,7 @@ dynabook-download-content = "dynabook_scraper.contents:cli_download_content"
 dynabook-download-broken-links = "dynabook_scraper.broken_links:cli_scrape_broken_links"
 dynabook-gen-products-index = "dynabook_scraper.product_index:cli_gen_products_index"
 dynabook-build-frontend = "dynabook_scraper.frontend:cli_build_frontend"
+dynabook-gen-sitemap = "dynabook_scraper.sitemap:cli_gen_sitemap"
 
 [build-system]
 requires = ["hatchling"]
