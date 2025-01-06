@@ -1,6 +1,8 @@
 import abc
+import asyncio
 import os
 import re
+import time
 import warnings
 from collections import defaultdict
 from pathlib import Path
@@ -45,15 +47,27 @@ memento_cache: dict[str, str] = {}
 
 ddgs = DDGS()
 
+TIME_BETWEEN_SEARCHES = 10  # seconds
+_last_search_time = 0
+_search_lock = asyncio.Lock()
+
 
 @http_retry
 async def ddg_search(query):
     search_fn = sync_to_async(ddgs.text, thread_sensitive=False)
     if query in search_cache:
         return search_cache[query]
-    results = await search_fn(query)
-    search_cache[query] = results
-    return results
+
+    async with _search_lock:
+        # Perform internal rate-limiting
+        global _last_search_time
+        if time.time() - _last_search_time < TIME_BETWEEN_SEARCHES:
+            await asyncio.sleep(TIME_BETWEEN_SEARCHES - (time.time() - _last_search_time))
+        _last_search_time = time.time()
+
+        results = await search_fn(query)
+        search_cache[query] = results
+        return results
 
 
 @register_scavenger
@@ -99,7 +113,7 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
     _ia_archive_url_re = re.compile(r"^https?://[\w.]*archive\.org/view_archive\.php\?archive=.*$")
 
     @staticmethod
-    async def _get_ia_item_file_url(ia_id: str, filename: str, details: dict[str, Any]) -> str | None:
+    async def _get_ia_item_file_url(ia_id: str, filename: str, details: dict[str, Any]) -> tuple[str, int] | None:
         # noinspection PyTypeChecker, PyArgumentList
         all_files = await sync_to_async(internetarchive.get_files, thread_sensitive=False)(ia_id)
 
@@ -133,11 +147,13 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
         elif len(files) > 1:
             warnings.warn(f"Multiple files found for {filename} in {ia_id}: {files}")
 
-        return found_file.url
+        return found_file.url, found_file.size
 
     @staticmethod
     @http_retry
-    async def _get_ia_archive_content_file_url(url: str, filename: str, details: dict[str, Any]) -> str | None:
+    async def _get_ia_archive_content_file_url(
+        url: str, filename: str, details: dict[str, Any]
+    ) -> tuple[str, int] | None:
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 response.raise_for_status()
@@ -171,7 +187,7 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
         for fname, url, size in files:
             if fname == filename.lower():
                 if not file_size or size == file_size:
-                    return url
+                    return url, size
 
         return None
 
@@ -182,12 +198,14 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
 
         found_file_url = None
         strategy = None
+        size = 0
         if filename.lower() in potential_results:
             if "fileSize" in details:
                 file_size = details["fileSize"]
                 files = potential_results[filename.lower()]
                 if str(file_size) in files:
                     found_file_url = files[str(file_size)]
+                    size = file_size
                     strategy = "potential_results"
             else:
                 found_file_url = next(iter(potential_results[filename.lower()].values()))
@@ -206,11 +224,13 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
                 # Internet Archive direct uploads for now
                 if match := self._ia_item_url_re.match(result["href"]):
                     ia_id = match.group(1)
-                    found_file_url = await self._get_ia_item_file_url(ia_id, filename, details)
+                    found_file_url, size = await self._get_ia_item_file_url(ia_id, filename, details)
                     strategy = "internet_archive"
                 # Archive content listing pages
                 elif self._ia_archive_url_re.match(result["href"]):
-                    found_file_url = await self._get_ia_archive_content_file_url(result["href"], filename, details)
+                    found_file_url, size = await self._get_ia_archive_content_file_url(
+                        result["href"], filename, details
+                    )
                     strategy = "internet_archive_archive"
                 else:
                     continue
@@ -225,7 +245,7 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
             found_file_url = f"https:{found_file_url}"
 
         tqdm.write(f"Downloading from Internet Archive: {url}")
-        await download_file(found_file_url, out_dir)
+        await download_file(found_file_url, out_dir, size=size)
 
         return {
             "mirror_url": found_file_url,
@@ -239,8 +259,12 @@ async def find_broken_links_content():
             continue
         content_id = file.replace("_crawl_result.json", "")
 
-        async with aiofiles.open(content_dir / file) as f:
-            result = await json.aload(f)
+        try:
+            async with aiofiles.open(content_dir / file) as f:
+                result = await json.aload(f)
+        except Exception as e:
+            tqdm.write(f"Error processing {file}: {e}")
+            raise
 
         if result["status_code"] == 200:
             continue
@@ -259,7 +283,7 @@ async def find_broken_links_content():
         yield details
 
 
-async def scrape_broken_link(details):
+async def scrape_broken_link(details) -> bool:
     cid = details["contentID"]
     url = details["contentFile"]
     filename = Path(url).name
@@ -270,7 +294,7 @@ async def scrape_broken_link(details):
             result = await rescuer.download(url, out_dir, details)
             await write_result_file(cid, url, 200, url, **result)
             tqdm.write(f"Rescued {url} [{cid}]: {result}")
-            break
+            return True
         except (aiohttp.ClientResponseError, aiohttp.ClientPayloadError, NotFoundError) as e:
             last_exc = e
             tqdm.write(f"Error for {url} [{cid}]: {e}")
@@ -280,6 +304,7 @@ async def scrape_broken_link(details):
             await write_result_file(cid, url, 404, filename, last_exc.mirror_url)
         else:
             await write_result_file(cid, url, last_exc.status, filename, last_exc.request_info.url.host)
+    return False
 
 
 async def scrape_broken_links():
@@ -305,11 +330,23 @@ async def scrape_broken_links():
 
         progress = tqdm(total=len(broken_links), desc="Scraping broken links")
 
+        rescued_count = 0
+        failed_count = 0
+
         async def coro(details):
-            await scrape_broken_link(details)
+            rescued = await scrape_broken_link(details)
+            if rescued:
+                nonlocal rescued_count
+                rescued_count += 1
+            else:
+                nonlocal failed_count
+                failed_count += 1
             progress.update()
 
-        await run_concurrently(5, coro, broken_links)
+        try:
+            await run_concurrently(5, coro, broken_links)
+        finally:
+            tqdm.write(f"Rescued {rescued_count} links, failed to rescue {failed_count} links")
 
     finally:
         with open(potential_results_path, "w") as f:

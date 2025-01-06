@@ -1,8 +1,7 @@
 import asyncio
 import os
+import subprocess
 import traceback
-from urllib import request
-from urllib.error import URLError
 
 from sagemcom_api.client import SagemcomClient
 from sagemcom_api.enums import EncryptionMethod
@@ -10,11 +9,13 @@ from tqdm import tqdm
 
 
 def has_internet():
-    try:
-        request.urlopen("http://1.1.1.1", timeout=1)
-        return True
-    except URLError:
-        return False
+    p = subprocess.run(
+        ["ping", "-c", "1", "1.1.1.1", "-W", "1"],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
+        check=False,
+    )
+    return p.returncode == 0
 
 
 async def reboot_router():
