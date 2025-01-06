@@ -22,6 +22,8 @@ from dynabook_scraper.utils.common import download_file, write_result_file, run_
 from dynabook_scraper.utils.paths import content_dir, downloads_dir, data_dir
 from dynabook_scraper.utils.uvloop import async_run
 
+REALLY_DO_SEARCH = False
+
 rescuers = []
 
 
@@ -57,6 +59,9 @@ async def ddg_search(query):
     search_fn = sync_to_async(ddgs.text, thread_sensitive=False)
     if query in search_cache:
         return search_cache[query]
+
+    if not REALLY_DO_SEARCH:
+        return []
 
     async with _search_lock:
         # Perform internal rate-limiting
