@@ -1,4 +1,6 @@
+import shutil
 import sys
+from pathlib import Path
 
 import jinja2
 from jinja2 import select_autoescape
@@ -37,6 +39,8 @@ def cli_build_frontend():
     (data_dir / "eula").mkdir(exist_ok=True)
     with open(data_dir / "eula" / "index.html", "w") as f:
         f.write(render("eula.html"))
+
+    shutil.copy2(Path(__file__).parent / "templates/dlServiceWorker.js", data_dir / "product/dlServiceWorker.js")
 
 
 if __name__ == "__main__":

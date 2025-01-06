@@ -1,12 +1,80 @@
 {% extends "inc/base.html" %}
 
-{% block content %}
+{% block head %}
+    <script type="module" crossorigin="anonymous">
+        import {downloadZip, predictLength} from "https://cdn.jsdelivr.net/npm/client-zip@2.4.6/index.js";
 
+        window.downloadZip = downloadZip;
+        window.predictLength = predictLength;
+    </script>
+{% endblock %}
+
+{% block content %}
     <article id="product">
         <em>Loading...</em>
     </article>
 
+    <dialog>
+        <article>
+            <header>
+                <button aria-label="Close" rel="prev" onclick="closeDownloadDialog()"></button>
+                <p>
+                    <strong>Download drivers and manuals</strong>
+                </p>
+            </header>
+
+            <div>
+                <p>
+                    Download drivers and manuals in a single, uncompressed ZIP file. The ZIP is generated on-the-fly on
+                    your web browser.
+                </p>
+
+                <article id="service-workers-warning" class="pico-background-amber-200">
+                    <p class="pico-background-amber-200">
+                        Service workers are not enabled or supported on your browser.
+                    </p>
+                    <p class="pico-background-amber-200">
+                        This usually means you're not visiting this website over HTTPS or you're in incognito mode. The
+                        download should still work but will not report progress.
+                    </p>
+                    <p class="pico-background-amber-200">
+                        Make sure you visit this site over HTTPS and on a modern browser.
+                    </p>
+                </article>
+
+                <fieldset id="driver-dl-oses">
+                    <legend>Operating systems</legend>
+                </fieldset>
+                <fieldset>
+                    <label>
+                        <input id="include-manuals" type="checkbox" role="switch" checked/>
+                        Include manuals and specifications
+                    </label>
+                    <label>
+                        <input id="include-titles" type="checkbox" role="switch" checked/>
+                        Place files in folders named after their titles
+                    </label>
+                </fieldset>
+                <p id="download-size">Download size: 123.45MB</p>
+            </div>
+            <form id="download-zip-form" name="download-zip-form" action="downloadDrivers/drivers.zip" method="POST"
+                  style="text-align: right;">
+                <input type="hidden" name="payload" value="[]"/>
+                <footer>
+                    <button type="reset" class="secondary" onclick="closeDownloadDialog();">
+                        Cancel
+                    </button>
+                    <button type="submit" id="download-drivers-btn">
+                        <span class="material-icons">file_download</span> Download
+                    </button>
+                </footer>
+            </form>
+        </article>
+    </dialog>
+
     <script>
+        let product = null;
+
         async function loadProduct(mid) {
             const root = document.getElementById('product');
 
@@ -24,7 +92,7 @@
                 return;
             }
 
-            const product = await response.json();
+            product = await response.json();
 
             const title = `${product.family} ${product.name}`;
             document.title = `${title} - Toshiba/Dynabook Drivers and Manuals Archive`;
@@ -89,6 +157,13 @@
             // Add drivers
             if (Object.hasOwn(product, "drivers") && !isEmpty(product.drivers.contents)) {
                 console.log("has drivers");
+
+
+                const downloadAll = document.createElement('a');
+                downloadAll.textContent = 'Download all drivers';
+                downloadAll.href = `javascript:openDownloadDialog()`;
+                content.appendChild(downloadAll);
+
                 const accordion = document.createElement('details');
                 accordion.setAttribute('open', '');
                 const summary = document.createElement('summary');
@@ -102,6 +177,18 @@
                         continue;
                     }
 
+                    // Add the OS checkbox in the download dialog
+                    const fieldset = document.getElementById('driver-dl-oses');
+                    const label = document.createElement('label');
+                    fieldset.appendChild(label);
+                    const checkboxOsName = os === "Any" ? "Generic" : os;
+                    label.innerHTML = `
+                        <input type="checkbox" name="os" value="${os}" checked>
+                        ${checkboxOsName}
+                    `;
+                    label.addEventListener('change', updateDownloadForm);
+
+                    // Add the drivers accordion
                     const accordion2 = document.createElement('details');
                     const summary2 = document.createElement('summary');
                     summary2.textContent = os;
@@ -175,10 +262,213 @@
             }
         }
 
+        function sanitizeWindowsDirName(filename) {
+            const invalidCharacters = /[\\/:*?"<>|]/g;
+            const reservedNames = [
+                "CON", "PRN", "AUX", "NUL",
+                "COM1", "COM2", "COM3", "COM4", "COM5", "COM6", "COM7", "COM8", "COM9",
+                "LPT1", "LPT2", "LPT3", "LPT4", "LPT5", "LPT6", "LPT7", "LPT8", "LPT9"
+            ];
+
+            let sanitized = filename.trim();
+            sanitized = sanitized.replace(/[/\\]/, "-");
+            sanitized = sanitized.replace(invalidCharacters, "");
+            sanitized = sanitized.replace(/[.\s]+$/, "");
+            const nameWithoutExtension = sanitized.split(".")[0].toUpperCase();
+            if (reservedNames.includes(nameWithoutExtension)) {
+                sanitized = `_${sanitized}`; // Prefix with an underscore to avoid conflicts
+            }
+
+            // Limit the length to 255 characters for long filenames (if needed)
+            if (sanitized.length > 255) {
+                sanitized = sanitized.slice(0, 255);
+            }
+
+            return sanitized;
+        }
+
+        function getOsDrivers(osName) {
+            const drivers = product.drivers.drivers[osName];
+            return drivers.map(driverId => product.drivers.contents[driverId]);
+        }
+
+        async function getContentsDownloadMeta(prefix, contents, includeTitles, performFetch) {
+            const toDownload = [];
+            for (const obj of contents) {
+                if (obj == null) continue;
+                if (obj.status_code !== 200) continue;
+
+                const contentFile = obj.contentFile;
+                const filename = contentFile.split('/').pop();
+                const url = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
+
+                const dateStr = obj.orgPubDate ?? obj.startDate ?? obj.createDate;
+                const date = dateStr ? new Date(dateStr) : new Date();
+
+                let response = null;
+
+                const outName = includeTitles
+                    ? `${prefix}/${sanitizeWindowsDirName(obj.title)}/${filename}`
+                    : `${prefix}/${filename}`;
+
+                if (performFetch) {
+                    response = await fetch(url);
+                    if (!response.ok) {
+                        console.warn(`Failed to fetch ${url}`);
+                        continue;
+                    }
+
+                    toDownload.push({
+                        name: outName,
+                        lastModified: date,
+                        input: response,
+                    });
+                } else {
+
+                    toDownload.push({
+                        name: outName,
+                        lastModified: date,
+                        size: obj.fileSize,
+                        url: url,
+                    });
+                }
+
+            }
+
+            return toDownload;
+        }
+
+        async function getAllDriversDownloadMeta(osNames, includeTitles, includeManuals, performFetchs) {
+            const toDownload = [];
+
+            for (const osName of osNames) {
+                const prettyName = osName === "Any" ? "Generic" : osName;
+                const drivers = await getContentsDownloadMeta(prettyName, getOsDrivers(osName), includeTitles, performFetchs);
+                toDownload.push(...drivers);
+            }
+
+            if (includeManuals) {
+                const manuals = await getContentsDownloadMeta('Manuals and specs', product.manuals_and_specs, includeTitles, performFetchs);
+                toDownload.push(...manuals);
+            }
+
+            return toDownload;
+        }
+
+        async function predictDriversZipSize(osNames, includeTitles, includeManuals) {
+            const toDownload = await getAllDriversDownloadMeta(osNames, includeTitles, includeManuals, false);
+            return predictLength(toDownload);
+        }
+
+        async function downloadDriversNoSvcWorker(osNames, includeTitles, includeManuals) {
+            const toDownload = await getAllDriversDownloadMeta(osNames, includeTitles, includeManuals, true);
+
+            if (toDownload.length === 0) {
+                alert("No drivers available for this operating system");
+                return;
+            }
+
+            const blob = await downloadZip(toDownload).blob();
+
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${product.family} ${product.name}.zip`;
+            link.click();
+            link.remove();
+
+            setTimeout(() => {
+                URL.revokeObjectURL(link.href);
+            }, 1000);
+        }
+
+        function openDownloadDialog() {
+            document.querySelector('dialog').setAttribute('open', '');
+            updateDownloadForm();
+        }
+
+        function closeDownloadDialog() {
+            document.querySelector('dialog').removeAttribute('open');
+        }
+
+        async function doDownloadDriversNoSvcWorker(event) {
+            if (event) {
+                event.preventDefault();
+            }
+
+            const osNames = Array.from(document.querySelectorAll('#driver-dl-oses input:checked')).map(e => e.value);
+            const includeTitles = document.getElementById('include-titles').checked;
+            const includeManuals = document.getElementById('include-manuals').checked;
+
+            const downloadBtn = document.getElementById('download-drivers-btn');
+            downloadBtn.setAttribute('disabled', '');
+            const icon = downloadBtn.querySelector('.material-icons');
+            icon.textContent = 'hourglass_empty';
+
+            await downloadDriversNoSvcWorker(osNames, includeTitles, includeManuals);
+            closeDownloadDialog();
+
+            downloadBtn.removeAttribute('disabled');
+            icon.textContent = 'file_download';
+        }
+
+        async function updateDownloadForm() {
+            const osNames = Array.from(document.querySelectorAll('#driver-dl-oses input:checked')).map(e => e.value);
+            const includeTitles = document.getElementById('include-titles').checked;
+            const includeManuals = document.getElementById('include-manuals').checked;
+
+            const size = await predictDriversZipSize(osNames, includeTitles, includeManuals);
+            document.getElementById('download-size').textContent = `Download size: ${humanFileSize(size)}`;
+
+            const toDownload = await getAllDriversDownloadMeta(osNames, includeTitles, includeManuals, false);
+            const form = document.getElementById('download-zip-form');
+            form.querySelector('input[name="payload"]').value = JSON.stringify(toDownload);
+            form.action = `downloadDrivers/${product.family} ${product.name}.zip`;
+        }
+
+        // Add listeners for the download dialog
+        document.getElementById('include-manuals').addEventListener('change', updateDownloadForm);
+        document.getElementById('include-titles').addEventListener('change', updateDownloadForm);
+
+        if ("serviceWorker" in navigator) {
+            document.getElementById('service-workers-warning').remove();
+            let serviceWorkerRegistration = null;
+            navigator.serviceWorker.register("./dlServiceWorker.js").then((reg) => {
+                serviceWorkerRegistration = reg;
+                console.log("Service worker registered: ", reg.active);
+            }).catch((e) => {
+                console.error("Failed to register service worker", e);
+            });
+
+            // Workaround to keep the service worker alive on Firefox
+            setInterval(async function keepAlive() {
+                const resp = await fetch('downloadDrivers/keepalive', {
+                    method: 'POST'
+                });
+                if (!resp.ok) {
+                    console.error("Service worked seems to be dead");
+                    if (serviceWorkerRegistration) {
+                        serviceWorkerRegistration.unregister();
+                    }
+                    serviceWorkerRegistration = await navigator.serviceWorker.register("./dlServiceWorker.js")
+                }
+            }, 4000);
+        } else {
+            const submitBtn = document.getElementById('download-drivers-btn');
+            submitBtn.addEventListener('click', doDownloadDriversNoSvcWorker);
+        }
+
         const urlParams = new URLSearchParams(window.location.search);
         const mid = urlParams.get('mid');
         if (mid) {
-            loadProduct(mid);
+            function _updateForm() {
+                if (window.predictLength === undefined) {
+                    setTimeout(_updateForm, 100);
+                } else {
+                    updateDownloadForm();
+                }
+            }
+
+            loadProduct(mid).then(_updateForm);
         } else {
             document.getElementById('product').innerHTML = 'No product selected';
         }

@@ -133,10 +133,28 @@
         }
 
         function humanFileSize(size) {
-            const i = size === 0 ? 0 : Math.floor(Math.log(size) / Math.log(1024));
-            return +((size / Math.pow(1024, i)).toFixed(2)) + ' ' + ['B', 'kB', 'MB', 'GB', 'TB'][i];
-        }
+            if (typeof size !== 'bigint' && typeof size !== 'number') {
+                throw new TypeError('Size must be a number or a BigInt');
+            }
 
+            const KB = BigInt(1024);
+            const units = ['B', 'kB', 'MB', 'GB', 'TB'];
+
+            if (size === 0 || size === BigInt(0)) {
+                return '0 B';
+            }
+
+            let i = 0;
+            let bigSize = BigInt(size);
+
+            while (bigSize >= KB && i < units.length - 1) {
+                bigSize /= KB;
+                i++;
+            }
+
+            const sizeNumber = Number(bigSize);
+            return sizeNumber.toFixed(2) + ' ' + units[i];
+        }
 
         function renderContentListEntry(obj) {
             const entry = document.createElement('div');
@@ -255,7 +273,7 @@
             font-family: monospace;
         }
 
-        .download-box {
+        .`-box {
             display: flex;
             justify-content: space-between;
             align-items: center;
@@ -288,6 +306,18 @@
 
         a.download {
             min-width: 165px;
+        }
+
+        dialog fieldset {
+            padding: 0 10px;
+        }
+
+        dialog article article {
+            width: initial;
+        }
+
+        button[type=submit]#download-drivers-btn {
+            width: initial;
         }
     </style>
 
