@@ -1,5 +1,4 @@
 import re
-import re
 import warnings
 from pathlib import Path
 from typing import Any
@@ -56,7 +55,11 @@ async def fix_markup(content_id: str, markup: str) -> str:
         dest_dir = downloads_dir / str(content_id)
         dest_dir.mkdir(exist_ok=True, parents=True)
 
-        await download_file(src, dest_dir, out_filename=fname, skip_existing=True)
+        try:
+            await download_file(src, dest_dir, out_filename=fname, skip_existing=True)
+        except Exception as e:
+            warnings.warn(f"Failed to download {src}: {e}")
+            continue
         img["src"] = f"../assets/content/{content_id}/{fname}"
 
     return str(soup)
