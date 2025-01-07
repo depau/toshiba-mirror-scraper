@@ -297,7 +297,7 @@ async def scrape_broken_link(details) -> bool:
     for rescuer in rescuers:
         try:
             result = await rescuer.download(url, out_dir, details)
-            await write_result_file(cid, url, 200, url, **result)
+            await write_result_file(cid, url, 200, filename, **result)
             tqdm.write(f"Rescued {url} [{cid}]: {result}")
             return True
         except (aiohttp.ClientResponseError, aiohttp.ClientPayloadError, NotFoundError) as e:
