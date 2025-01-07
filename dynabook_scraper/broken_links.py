@@ -100,8 +100,9 @@ class MementoRescuer(FileRescuerStrategy):
 
         hostname = urlparse(archive_url).hostname
 
+        filename = Path(url).name
         tqdm.write(f"Downloading from Memento {hostname}: {url}")
-        await download_file(archive_url, out_dir)
+        await download_file(archive_url, out_dir, out_filename=filename)
 
         fname = Path(archive_url).name
         potential_results[fname.lower()][str((out_dir / fname).stat().st_size)] = archive_url
@@ -250,7 +251,7 @@ class DuckSearchInternetArchiveRescuer(FileRescuerStrategy):
             found_file_url = f"https:{found_file_url}"
 
         tqdm.write(f"Downloading from Internet Archive: {url}")
-        await download_file(found_file_url, out_dir, size=size)
+        await download_file(found_file_url, out_dir, size=size, out_filename=filename)
 
         return {
             "mirror_url": found_file_url,
