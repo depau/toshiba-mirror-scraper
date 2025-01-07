@@ -12,7 +12,7 @@ from multidict import MultiMapping
 from tqdm import tqdm
 
 from . import json
-from .paths import content_dir
+from .paths import content_dir, downloads_dir
 
 
 def extract_json_var(script: str, var_name: str):
@@ -134,7 +134,8 @@ async def write_result_file(cid: str, url: str, status_code: int, filename: str,
         **additional_info,
     }
     if 200 <= status_code < 300:
-        result["url"] = f"content/{cid}/{filename}"
+        result["url"] = f"assets/content/{cid}/{filename}"
+        result["actual_size"] = Path(downloads_dir / f"{cid}/{filename}").stat().st_size
 
     async with aiofiles.open(content_dir / f"{cid}_crawl_result.json", "w") as f:
         await json.adump(result, f)
