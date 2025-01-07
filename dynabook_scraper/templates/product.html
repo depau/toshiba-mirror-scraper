@@ -301,9 +301,8 @@
                 if (obj == null) continue;
                 if (obj.status_code !== 200) continue;
 
-                const contentFile = obj.contentFile;
-                const filename = contentFile.split('/').pop();
-                const url = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
+                const url = `{{ base_url }}/${obj.url}`;
+                const filename = url.split('/').pop();
 
                 const dateStr = contentDate(obj);
                 const date = dateStr ? new Date(dateStr) : new Date();
@@ -331,7 +330,7 @@
                     toDownload.push({
                         name: outName,
                         lastModified: date,
-                        size: obj.fileSize,
+                        size: obj.actual_size,
                         url: url,
                     });
                 }

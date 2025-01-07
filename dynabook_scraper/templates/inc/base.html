@@ -225,10 +225,8 @@
 
                     dlDiv.setAttribute('data-tooltip', `Got a ${obj.status_code} response at crawl time`);
                 } else {
-                    const contentFile = obj.contentFile;
-                    const filename = contentFile.split('/').pop();
                     downloadBtn.innerHTML = `<span class="material-icons">file_download</span> Download`;
-                    downloadBtn.href = `{{ base_url }}/assets/content/${obj.contentID}/${filename}`;
+                    downloadBtn.href = `{{ base_url }}/${obj.url}`;
 
                     if (obj.mirror_hostname) {
                         dlDiv.setAttribute('data-tooltip', `From ${archiveNameMap[obj.mirror_hostname] ?? obj.mirror_hostname}`);

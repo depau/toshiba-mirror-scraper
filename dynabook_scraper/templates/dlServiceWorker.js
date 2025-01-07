@@ -1,15 +1,15 @@
 importScripts('https://unpkg.com/client-zip@2.4.6/worker.js');
 
-async function* fileDownloadGenerator(payload, onlyHead) {
+async function* fileDownloadGenerator(payload) {
     for (const item of payload) {
-        let response = await fetch(item.url, {method: onlyHead ? 'HEAD' : 'GET'})
+        let response = await fetch(item.url);
 
         if (!response.ok) {
             console.warn(`Failed to download ${item.url}`)
             continue;
         }
 
-        console.debug(`Fetched (only head: ${onlyHead}) ${item.url}`)
+        console.debug(`Fetched ${item.url}`)
         const result = {
             input: response,
             ...item,
@@ -39,16 +39,10 @@ self.addEventListener("fetch", async (event) => {
 
             event.respondWith((async () => {
                 const form = await event.request.formData()
-                const payload = JSON.parse(form.get("payload"))
-
-                const metadata = [];
-                for await (const item of fileDownloadGenerator(payload, true)) {
-                    metadata.push(item)
-                }
-                console.log("Fetched metadata", metadata)
+                const metadata = JSON.parse(form.get("payload"))
 
                 return downloadZip(
-                    fileDownloadGenerator(payload, false),
+                    fileDownloadGenerator(metadata),
                     {metadata}
                 )
             })());

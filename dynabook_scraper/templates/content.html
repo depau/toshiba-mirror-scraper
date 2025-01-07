@@ -88,13 +88,15 @@
                 const descBox = document.createElement('div');
                 container.appendChild(descBox);
 
-                let filename = content.contentFile.split('/').pop();
+                let filename = crawlResult.url.split('/').pop();
                 if (content.contentType === 'scraper-swf') {
                     filename = 'index.html';
                 }
                 let fileSize = "";
                 if (content.fileSize) {
                     fileSize = ` (${humanFileSize(content.fileSize)})`;
+                } else {
+                    fileSize = ` (${humanFileSize(crawlResult.actual_size)})`;
                 }
                 if (crawlResult.status_code === 200) {
                     let via = "";
@@ -112,7 +114,7 @@
                     const downloadLink = document.createElement('a');
                     downloadLink.setAttribute('role', 'button');
                     downloadLink.classList.add('download');
-                    downloadLink.href = `{{ base_url }}/assets/content/${contentID}/${filename}`;
+                    downloadLink.href = `{{ base_url }}/${crawlResult.url}`;
                     downloadLink.innerHTML = `<span class="material-icons">file_download</span> Download`;
                     container.appendChild(downloadLink);
                 } else {
