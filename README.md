@@ -14,6 +14,10 @@ add them to the mirror.
 
 This website also allows you to bulk-download all drivers.
 
+> [!NOTE]
+> Dynabook's website seems to be blocking some IP ranges, including all IPs from Italy, apparently. Visiting it via 
+> ProtonVPN Free Netherlands seems to work. Mullvad doesn't work.
+
 ## The scraper
 
 > [!WARNING]
