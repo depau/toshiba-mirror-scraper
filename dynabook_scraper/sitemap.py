@@ -30,7 +30,7 @@ def gen_sitemap(web_prefix: str) -> Generator[str, None, None]:
     yield '<?xml version="1.0" encoding="UTF-8"?>'
     yield '<urlset xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.sitemaps.org/schemas/sitemap/0.9 http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd" xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
 
-    now = datetime.now().isoformat()
+    now = datetime.now().strftime("%Y-%m-%d")
 
     for url in gen_sitemap_urls(web_prefix):
         yield f"<url><loc>{url}</loc><lastmod>{now}</lastmod></url>"
