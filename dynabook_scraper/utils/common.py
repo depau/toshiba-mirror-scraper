@@ -58,6 +58,7 @@ def http_retry[T](fn: Callable[..., T]) -> Callable[..., T]:
                 aiohttp.ClientConnectorError,
                 aiohttp.ConnectionTimeoutError,
                 TimeoutError,
+                asyncio.TimeoutError,
             ) as e:
                 exc = e
                 tqdm.write(f"Connection error: {e} - attempt: {i + 1}")
