@@ -431,7 +431,7 @@
         document.getElementById('include-manuals').addEventListener('change', updateDownloadForm);
         document.getElementById('include-titles').addEventListener('change', updateDownloadForm);
 
-        const serviceWorkerPath = "./dlServiceWorker.js?{{ build_num }}";
+        const serviceWorkerPath = "./dlServiceWorker.js?v={{ svc_worker_hash }}";
         if ("serviceWorker" in navigator) {
             document.getElementById('service-workers-warning').remove();
             let serviceWorkerRegistration = null;
