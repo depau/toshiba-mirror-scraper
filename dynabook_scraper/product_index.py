@@ -27,6 +27,7 @@ def filter_content(content: dict[str, Any]) -> dict[str, Any]:
         "mirror_url",
         "rescue_strategy",
         "url",
+        "actual_size",
         "tags",
         "tagNames",
         "os",
