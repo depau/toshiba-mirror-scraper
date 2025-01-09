@@ -450,7 +450,8 @@
                 if (!resp.ok) {
                     console.error("Service worked seems to be dead");
                     if (serviceWorkerRegistration) {
-                        serviceWorkerRegistration.unregister();
+                        const result = await serviceWorkerRegistration.unregister();
+                        console.log("Service worker unregistered: ", result);
                     }
                     serviceWorkerRegistration = await navigator.serviceWorker.register(serviceWorkerPath);
                 }
