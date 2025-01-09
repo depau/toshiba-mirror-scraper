@@ -1,3 +1,4 @@
+import random
 import shutil
 import sys
 from pathlib import Path
@@ -15,7 +16,10 @@ env = jinja2.Environment(
 
 def render(name: str, **kwargs) -> str:
     template = env.get_template(name)
-    return template.render(**kwargs)
+    return template.render(
+        build_num=random.randint(0, 100000),
+        **kwargs,
+    )
 
 
 def cli_build_frontend():

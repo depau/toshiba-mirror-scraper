@@ -431,10 +431,11 @@
         document.getElementById('include-manuals').addEventListener('change', updateDownloadForm);
         document.getElementById('include-titles').addEventListener('change', updateDownloadForm);
 
+        const serviceWorkerPath = "./dlServiceWorker.js?{{ build_num }}";
         if ("serviceWorker" in navigator) {
             document.getElementById('service-workers-warning').remove();
             let serviceWorkerRegistration = null;
-            navigator.serviceWorker.register("./dlServiceWorker.js").then((reg) => {
+            navigator.serviceWorker.register(serviceWorkerPath).then((reg) => {
                 serviceWorkerRegistration = reg;
                 console.log("Service worker registered: ", reg.active);
             }).catch((e) => {
@@ -451,7 +452,7 @@
                     if (serviceWorkerRegistration) {
                         serviceWorkerRegistration.unregister();
                     }
-                    serviceWorkerRegistration = await navigator.serviceWorker.register("./dlServiceWorker.js")
+                    serviceWorkerRegistration = await navigator.serviceWorker.register(serviceWorkerPath);
                 }
             }, 4000);
         } else {
